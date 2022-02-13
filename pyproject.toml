@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "onlynoise"
+version = "0.1.0"
+description = ""
+authors = ["Grigory Bakunov <thebobuk@ya.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "*"
+pymongo = "*"
+motor = "*"
+uvicorn = "^0.17.4"
+mypy = "^0.931"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
