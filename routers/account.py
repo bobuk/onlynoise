@@ -4,6 +4,8 @@ import string
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 from mongodb import DB
+from . import postbox
+
 import pymongo
 
 router = APIRouter(prefix="/accounts")
@@ -91,3 +93,16 @@ def create_postbox(account_id: str, response: Response):
 
     response.status_code = 201
     return CreatePostboxResponse(status="created", postbox_id=postbox_id, created_at=created_at)
+
+
+@router.get("/{account_id:str}/messages", response_model=postbox.GetMessagesResponse)
+def get_all_messages(account_id: str, response: Response):
+    with DB as db:
+        account = db.accounts.find_one({"account_id": account_id})
+        if not account:
+            response.status_code = 200
+            return postbox.GetMessagesResponse(status="ok", messages=[])
+        postboxes = [x["postbox_id"] for x in account["postboxes"]]
+        messages = [message for message in db.messages.find({"postbox_id": {"$in": postboxes}})]
+    response.status_code = 200
+    return postbox.GetMessagesResponse(status="ok", messages=messages)

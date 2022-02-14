@@ -12,6 +12,7 @@ pymongo = "*"
 motor = "*"
 uvicorn = "^0.17.4"
 mypy = "^0.931"
+httpx = "^0.22.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,3 +1,3 @@
-from routers import health, account
+from routers import health, account, postbox
 
-modules = [health, account]
+modules = [health, account, postbox]
