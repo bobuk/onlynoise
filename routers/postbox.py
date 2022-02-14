@@ -54,7 +54,7 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
             "postbox_id": postbox_id,
             "created_at": int(time.time())
         })
-        remove_old_messages(db, postbox_id)
+        # remove_old_messages(db, postbox_id)
         response.status_code = 201
         return CreateMessageResponse(status="ok")
 
