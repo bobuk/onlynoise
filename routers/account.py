@@ -103,6 +103,10 @@ def get_all_messages(account_id: str, response: Response):
             response.status_code = 200
             return postbox.GetMessagesResponse(status="ok", messages=[])
         postboxes = [x["postbox_id"] for x in account["postboxes"]]
-        messages = [message for message in db.messages.find({"postbox_id": {"$in": postboxes}})]
+        messages = []
+        for message in db.messages.find({"postbox_id": {"$in": postboxes}}):
+            message["id"] = str(message["_id"])
+            messages.append(message)
+
     response.status_code = 200
     return postbox.GetMessagesResponse(status="ok", messages=messages)

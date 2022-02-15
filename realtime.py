@@ -3,7 +3,7 @@ import websockets
 import motor.motor_asyncio
 import pymongo
 import json
-
+from copy import copy
 client = None
 
 
@@ -36,6 +36,7 @@ async def combiner(ws: websockets.WebSocketServerProtocol, path):
             async for message in cursor:
                 print(message)
                 last_created_at = message["created_at"]
+                message['id'] = copy(message["_id"])
                 del message["_id"]
                 await ws.send(json.dumps(message, ensure_ascii=False))
 

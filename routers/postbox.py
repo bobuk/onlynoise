@@ -20,6 +20,7 @@ class CreateMessageResponse(BaseModel):
 
 
 class Message(BaseModel):
+    id: str = Field(..., title="Unique Message ID")
     subject: str | None = Field("", title="Subject")
     body: str | None = Field("", title="Body")
     url: str | None = Field("", title="URL")
@@ -62,6 +63,10 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
 @router.get("/{postbox_id}/messages", response_model=GetMessagesResponse)
 def get_messages(postbox_id: str, response: Response):
     with DB as db:
-        messages = list(db.messages.find({"postbox_id": postbox_id}))
+        messages = []
+        for message in db.messages.find({"postbox_id": postbox_id}):
+            message["id"] = copy(message["_id"])
+            del message["_id"]
+            messages.append(message)
         response.status_code = 200
         return GetMessagesResponse(status="ok", messages=messages)
