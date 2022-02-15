@@ -1,0 +1,1 @@
+db.createCollection('messages', {"capped": true, "size": 100000000})

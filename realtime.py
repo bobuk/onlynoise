@@ -1,26 +1,30 @@
-import asyncio
+import asyncio, os
 import websockets
 import motor.motor_asyncio
 import pymongo
 import json
 from copy import copy
+
 client = None
+
+MONGO_HOST = os.environ.get("MONGO", "localhost")
 
 
 def DB():
     global client
-    client = motor.motor_asyncio.AsyncIOMotorClient('mongodb://localhost:27017')
+    client = motor.motor_asyncio.AsyncIOMotorClient(f"mongodb://{MONGO_HOST}:27017")
     return client.ondb
 
 
 async def postboxes_list(db, account_id: str) -> list[str]:
-    account = await db.accounts.find_one({'account_id': account_id})
+    account = await db.accounts.find_one({"account_id": account_id})
     if not account:
         return []
     return [postbox["postbox_id"] for postbox in account["postboxes"]]
 
 
 # ws://URL:8765/v1/accounts/ACCOUNT_ID/messages
+
 
 async def combiner(ws: websockets.WebSocketServerProtocol, path):
     db = DB()
@@ -30,13 +34,16 @@ async def combiner(ws: websockets.WebSocketServerProtocol, path):
     last_created_at = 0
     while True:
         postboxes = await postboxes_list(db, account_id)
-        cursor = db.messages.find({'postbox_id': {'$in': postboxes}, 'created_at': {'$gt': last_created_at}},
-                                  cursor_type=pymongo.CursorType.TAILABLE_AWAIT, oplog_replay=True)
+        cursor = db.messages.find(
+            {"postbox_id": {"$in": postboxes}, "created_at": {"$gt": last_created_at}},
+            cursor_type=pymongo.CursorType.TAILABLE_AWAIT,
+            oplog_replay=True,
+        )
         while cursor.alive:
             async for message in cursor:
                 print(message)
                 last_created_at = message["created_at"]
-                message['id'] = copy(message["_id"])
+                message["id"] = copy(message["_id"])
                 del message["_id"]
                 await ws.send(json.dumps(message, ensure_ascii=False))
 

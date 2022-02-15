@@ -15,8 +15,12 @@ def main():
         sys.exit(1)
     msg = gen_message()
     postbox_id = sys.argv[1]
-    print(httpx.post(f"http://localhost:8080/v1/postboxes/{postbox_id}/messages", json=msg))
+    print(
+        httpx.post(
+            f"http://localhost:8080/v1/postboxes/{postbox_id}/messages", json=msg
+        )
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

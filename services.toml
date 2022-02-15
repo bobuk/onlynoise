@@ -1,0 +1,13 @@
+[onlynoise]
+image = "docker.rubedo.cloud/onlynoise:latest"
+public = "onlynoise.rubedo.cloud @ 8080"
+envs = "MONGO=mongo"
+
+[mongo]
+image = "mongo:latest"
+volumes = [
+    "./db:/data/db",
+    "./data/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d"
+]
+envs = "MONGO_INITDB_DATABASE=ondb"
+networks = ["traefik"]
