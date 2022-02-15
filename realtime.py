@@ -43,7 +43,7 @@ async def combiner(ws: websockets.WebSocketServerProtocol, path):
             async for message in cursor:
                 print(message)
                 last_created_at = message["created_at"]
-                message["id"] = copy(message["_id"])
+                message["id"] = copy(str(message["_id"]))
                 del message["_id"]
                 await ws.send(json.dumps(message, ensure_ascii=False))
 
@@ -51,7 +51,7 @@ async def combiner(ws: websockets.WebSocketServerProtocol, path):
 
 
 async def main():
-    async with websockets.serve(combiner, "localhost", 8765):
+    async with websockets.serve(combiner, os.environ.get("HOST", "0.0.0.0"), 8765):
         await asyncio.Future()
 
 

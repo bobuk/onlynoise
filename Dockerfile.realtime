@@ -16,17 +16,16 @@ RUN poetry update --no-dev && poetry install
 
 ############################################################################################
 
-FROM python:3.10-slim AS onlynoise
+FROM python:3.10-slim AS onlynoise-realtime
 RUN groupadd -g 2000 py && useradd -u 2000 --gid py -m -d /app --shell /bin/bash py
 
-RUN mkdir -p /app/routers && chown py:py /app
+RUN mkdir -p /app && chown py:py /app
 
 USER py
 WORKDIR /app
 
 COPY --chown=py:py *.py /app/
-COPY --chown=py:py routers/*.py /app/routers/
 COPY --from=on-compile-image /app/.venv /app/.venv
 
-ENTRYPOINT ["/app/.venv/bin/uvicorn", "--port", "8080", "--workers", "4", "--host", "0.0.0.0"]
-CMD ["index:app"]
+ENTRYPOINT ["/app/.venv/bin/python"]
+CMD ["realtime.py"]

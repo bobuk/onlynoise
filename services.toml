@@ -3,6 +3,11 @@ image = "docker.rubedo.cloud/onlynoise:latest"
 public = "onlynoise.rubedo.cloud @ 8080"
 envs = "MONGO=mongo"
 
+[onlynoise-realtime]
+image = "docker.rubedo.cloud/onlynoise-realtime:latest"
+public = "onlynoise.rubedo.cloud/realtime @ 8765"
+envs = "MONGO=mongo"
+
 [mongo]
 image = "mongo:latest"
 volumes = [
