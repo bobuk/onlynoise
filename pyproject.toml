@@ -15,6 +15,9 @@ mypy = "^0.931"
 httpx = "^0.22.0"
 websockets = "^10.1"
 black = "^22.1.0"
+aioapns = "^2.1"
+cffi = "^1.15.0"
+pyapns-client = "^2.0.5"
 
 [build-system]
 requires = ["poetry-core"]

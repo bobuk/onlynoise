@@ -8,6 +8,12 @@ image = "docker.rubedo.cloud/onlynoise-realtime:latest"
 public = "onlynoise.rubedo.cloud/realtime @ 8765"
 envs = "MONGO=mongo"
 
+[onlynoise-push]
+image = "docker.rubedo.cloud/onlynoise-push:latest"
+envs = "MONGO=mongo"
+networks = ["traefik"]
+doppler = true
+
 [mongo]
 image = "mongo:latest"
 volumes = [

@@ -14,7 +14,7 @@ class CreateMessageRequest(BaseModel):
     body: str | None = Field("", title="Body")
     url: str | None = Field("", title="URL")
     image_url: str | None = Field("", title="Image URL")
-    important: bool = Field(False, title="Important")
+    important: bool | None = Field(False, title="Important")
 
 
 class CreateMessageResponse(BaseModel):
@@ -39,11 +39,12 @@ class GetMessagesResponse(BaseModel):
 
 
 def remove_old_messages(db, postbox_id: str):
-    db.messages.delete_many(
+    db.messages.update_many(
         {
             "postbox_id": postbox_id,
             "created_at": {"$lt": int(time.time()) - 24 * 60 * 60 * 7},
-        }
+        },
+        {"$set": {"is_deleted": True}}
     )
 
 
@@ -62,6 +63,8 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
                 "important": request.important,
                 "postbox_id": postbox_id,
                 "created_at": int(time.time()),
+                "is_deleted": False,
+                "is_sent": False,
             }
         )
         # remove_old_messages(db, postbox_id)
@@ -73,9 +76,9 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
 def get_messages(postbox_id: str, response: Response):
     with DB as db:
         messages = []
-        for message in db.messages.find({"postbox_id": postbox_id}):
+        for message in db.messages.find({"postbox_id": postbox_id, 'is_deleted': False}):
             message["id"] = copy(str(message["_id"]))
-            del message["_id"]
+            del message["_id"], message["is_deleted"], message["is_sent"]
             messages.append(message)
         response.status_code = 200
         return GetMessagesResponse(status="ok", messages=messages)

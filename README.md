@@ -1,4 +1,5 @@
 # onlynoise
 
-/accounts
-/postbox/{postbox_id
+## Todo
+
+- [ ] add "status" for messages (notification sent, deleted etc)

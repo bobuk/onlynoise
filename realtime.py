@@ -32,21 +32,22 @@ async def combiner(ws: websockets.WebSocketServerProtocol, path):
         return
     account_id = path.split("/")[3]
     last_created_at = 0
+    first_run = True
     while True:
         postboxes = await postboxes_list(db, account_id)
         cursor = db.messages.find(
-            {"postbox_id": {"$in": postboxes}, "created_at": {"$gt": last_created_at}},
+            {"postbox_id": {"$in": postboxes}, "is_deleted": False, "created_at": {"$gt": last_created_at}},
             cursor_type=pymongo.CursorType.TAILABLE_AWAIT,
             oplog_replay=True,
         )
         while cursor.alive:
             async for message in cursor:
-                print(message)
                 last_created_at = message["created_at"]
                 message["id"] = copy(str(message["_id"]))
                 del message["_id"]
-                await ws.send(json.dumps(message, ensure_ascii=False))
-
+                if not first_run:
+                    await ws.send(json.dumps(message, ensure_ascii=False))
+            first_run = False
         await asyncio.sleep(1)
 
 
