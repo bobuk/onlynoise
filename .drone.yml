@@ -21,7 +21,8 @@ steps:
   - name: send telegram notification
     image: appleboy/drone-telegram
     settings:
-      token: $tg
+      token:
+        from_secret: telegram
       to: "912974"
       debug: true
     message: >
@@ -30,9 +31,6 @@ steps:
       {{else}}
         build {{build.number}} failed. Fix me please.
       {{/success}}
-    environment:
-      tg:
-        from_secret: telegram
 volumes:
   - name: docker_sock
     host:
