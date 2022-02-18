@@ -1,0 +1,25 @@
+kind: pipeline
+name: default
+type: docker
+
+steps:
+  - name: task build and push
+    image: docker:dind
+    privileged: true
+    commands:
+      - docker login -u $USER -p $PSWD docker.rubedo.cloud
+      - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+      - task
+    environment:
+      PSWD:
+        from_secret: dpass
+      USER:
+        from_secret: duser
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+
+volumes:
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
