@@ -18,7 +18,14 @@ steps:
     volumes:
       - name: docker_sock
         path: /var/run/docker.sock
-
+  - name: send telegram notification
+    image: appleboy/drone-telegram
+    settings:
+      token: $tg
+      to: 912974
+    environment:
+      tg:
+        from_secret: telegram
 volumes:
   - name: docker_sock
     host:
