@@ -8,7 +8,7 @@ steps:
     privileged: true
     commands:
       - docker login -u $USER -p $PSWD docker.rubedo.cloud
-      - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+      - apk add curl && sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
       - task
     environment:
       PSWD:
