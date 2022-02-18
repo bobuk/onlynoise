@@ -2,17 +2,20 @@
 image = "docker.rubedo.cloud/onlynoise:latest"
 public = "onlynoise.rubedo.cloud @ 8080"
 envs = "MONGO=mongo"
+watchtower = true
 
 [onlynoise-realtime]
 image = "docker.rubedo.cloud/onlynoise-realtime:latest"
 public = "onlynoise.rubedo.cloud/realtime @ 8765"
 envs = "MONGO=mongo"
+watchtower = true
 
 [onlynoise-push]
 image = "docker.rubedo.cloud/onlynoise-push:latest"
 envs = "MONGO=mongo"
 networks = ["traefik"]
 doppler = true
+watchtower = true
 
 [mongo]
 image = "mongo:latest"
@@ -22,3 +25,4 @@ volumes = [
 ]
 envs = "MONGO_INITDB_DATABASE=ondb"
 networks = ["traefik"]
+watchtower = true

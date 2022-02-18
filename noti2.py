@@ -67,11 +67,10 @@ def main():
                 cursor = db.messages.find({'is_sent': False, 'is_deleted': False}, cursor_type=pymongo.CursorType.TAILABLE_AWAIT).limit(1)
                 logging.info("messages found")
                 while cursor.alive:
-                    logging.debug("circulating")
                     for message in cursor:
                         logging.info(f"message found {message=}")
                         send_message(db, message, client)
-                        time.sleep(0.1)
+                        time.sleep(1)
 
 if __name__ == "__main__":
     main()
