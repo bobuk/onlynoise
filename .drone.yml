@@ -23,6 +23,12 @@ steps:
     settings:
       token: $tg
       to: 912974
+    message: >
+      {{#success build.status}}
+        build {{build.number}} succeeded. Good job.
+      {{else}}
+        build {{build.number}} failed. Fix me please.
+      {{/success}}
     environment:
       tg:
         from_secret: telegram
