@@ -9,15 +9,15 @@ tasks:
 
   onlynoise:
     cmds:
-      - docker build -t docker.rubedo.cloud/onlynoise:latest -f Dockerfile .
+      - docker build -t docker.rubedo.cloud/onlynoise:latest -f docker/Dockerfile .
       - docker push docker.rubedo.cloud/onlynoise:latest
 
   onlynoise-realtime:
     cmds:
-      - docker build -t docker.rubedo.cloud/onlynoise-realtime:latest -f Dockerfile.realtime .
+      - docker build -t docker.rubedo.cloud/onlynoise-realtime:latest -f docker/Dockerfile.realtime .
       - docker push docker.rubedo.cloud/onlynoise-realtime:latest
 
   onlynoise-push:
     cmds:
-      - docker build -t docker.rubedo.cloud/onlynoise-push:latest -f Dockerfile.push .
+      - docker build -t docker.rubedo.cloud/onlynoise-push:latest -f docker/Dockerfile.push .
       - docker push docker.rubedo.cloud/onlynoise-push:latest

@@ -28,5 +28,5 @@ COPY --chown=py:py *.py /app/
 COPY --chown=py:py routers/*.py /app/routers/
 COPY --from=on-compile-image /app/.venv /app/.venv
 
-ENTRYPOINT ["/app/.venv/bin/uvicorn", "--port", "8080", "--workers", "4", "--host", "0.0.0.0"]
+ENTRYPOINT ["/app/.venv/bin/uvicorn", "--port", "8080", "--workers", "4", "--host", "0.0.0.0", "--proxy-headers"]
 CMD ["index:app"]

@@ -75,25 +75,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-#
-# sys.exit(0)
-# try:
-#     device_tokens = ["c2c1c8adde6535b1d344a05148750ee196cc5b21ee86961555ab11983272a158"]
-#     payload = IOSPayload(alert=IOSPayloadAlert(title='Хуй', subtitle='пизда и джигурда', body='Some message для теста.'))
-#     notification = IOSNotification(payload=payload, topic='com.isnifer.balalaika')
-#
-#     for device_token in device_tokens:
-#         try:
-#             client.push(notification=notification, device_token=device_token)
-#         except UnregisteredException as e:
-#             print(f'device is unregistered, compare timestamp {e.timestamp_datetime} and remove from db')
-#         except APNSDeviceException:
-#             print('flag the device as potentially invalid and remove from db after a few tries')
-#         except APNSServerException:
-#             print('try again later')
-#         except APNSProgrammingException:
-#             print('check your code and try again later')
-#         else:
-#             print('everything is ok')
-# finally:
-#     client.close()
