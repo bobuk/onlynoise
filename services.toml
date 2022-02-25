@@ -4,12 +4,6 @@ public = "onlynoise.rubedo.cloud @ 8080"
 envs = "MONGO=mongo"
 watchtower = true
 
-[onlynoise-realtime]
-image = "docker.rubedo.cloud/onlynoise-realtime:latest"
-public = "onlynoise.rubedo.cloud/realtime @ 8765"
-envs = "MONGO=mongo"
-watchtower = true
-
 [onlynoise-push]
 image = "docker.rubedo.cloud/onlynoise-push:latest"
 envs = "MONGO=mongo"
@@ -19,6 +13,7 @@ watchtower = true
 
 [mongo]
 image = "mongo:latest"
+command = "mongod --quiet"
 volumes = [
     "./db:/data/db",
     "./data/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d"

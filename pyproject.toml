@@ -18,6 +18,7 @@ black = "^22.1.0"
 aioapns = "^2.1"
 cffi = "^1.15.0"
 pyapns-client = "^2.0.5"
+sse-starlette = "^0.10.3"
 
 [build-system]
 requires = ["poetry-core"]

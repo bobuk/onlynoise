@@ -6,6 +6,7 @@ from routers import modules as router_modules
 app = FastAPI()
 for module in router_modules:
     app.include_router(module.router, prefix="/v1")
+    print(module.router.prefix)
 
 app.add_middleware(
     CORSMiddleware,
