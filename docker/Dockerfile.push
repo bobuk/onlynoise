@@ -1,11 +1,11 @@
 FROM python:3.10-slim AS on-compile-image
 RUN groupadd -g 2000 py && useradd -u 2000 --gid py -m -d /app --shell /bin/bash py
+RUN mkdir -p /app/routers && chown py:py /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential libssl-dev libffi-dev python3-dev \
     && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --upgrade pip && pip install poetry
 
-RUN mkdir -p /app/routers && chown py:py /app
 
 USER py
 WORKDIR /app
