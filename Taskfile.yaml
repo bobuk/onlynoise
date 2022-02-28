@@ -4,18 +4,12 @@ tasks:
   default:
     cmds:
       - task: onlynoise
-      - task: onlynoise-realtime
       - task: onlynoise-push
 
   onlynoise:
     cmds:
       - docker build -t docker.rubedo.cloud/onlynoise:latest -f docker/Dockerfile .
       - docker push docker.rubedo.cloud/onlynoise:latest
-
-  onlynoise-realtime:
-    cmds:
-      - docker build -t docker.rubedo.cloud/onlynoise-realtime:latest -f docker/Dockerfile.realtime .
-      - docker push docker.rubedo.cloud/onlynoise-realtime:latest
 
   onlynoise-push:
     cmds:
