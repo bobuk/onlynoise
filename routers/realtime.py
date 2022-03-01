@@ -47,7 +47,7 @@ async def eventsource_get_account_messages(account_id: str, request: Request):
                     message["id"] = copy(str(message["_id"]))
                     del message["_id"], message["is_deleted"], message["is_sent"]
                     if not first_run:
-                        yield {"data": json.dumps(message, ensure_ascii=False }
+                        yield {"data": json.dumps(message, ensure_ascii=False) }
                 first_run = False
             await asyncio.sleep(1)
 
