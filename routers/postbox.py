@@ -16,6 +16,7 @@ class CreateMessageRequest(BaseModel):
     image_url: str | None = Field("", title="Image URL")
     important: bool | None = Field(False, title="Important")
 
+    meta: dict | None = Field({}, title="Meta")
 
 class CreateMessageResponse(BaseModel):
     status: str = Field(..., title="Status")
@@ -28,6 +29,8 @@ class Message(BaseModel):
     url: str | None = Field("", title="URL")
     image_url: str | None = Field("", title="Image URL")
     important: bool = Field(False, title="Important")
+
+    meta: dict | None = Field({}, title="Meta")
 
     postbox_id: str = Field(..., title="Postbox ID")
     created_at: int = Field(..., title="Created At")
@@ -65,6 +68,7 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
                 "created_at": int(time.time()),
                 "is_deleted": False,
                 "is_sent": False,
+                "meta": request.meta,
             }
         )
         # remove_old_messages(db, postbox_id)
