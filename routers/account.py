@@ -62,7 +62,7 @@ def create_account(response: Response):
                 "account_id": account_id,
                 "created_at": created_at,
                 "devices": [],
-                "postboxes": [],  # post robot boxes (stone)
+                "postboxes": [],
             }
         )
     return CreateAccountResponse(
