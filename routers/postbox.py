@@ -35,6 +35,7 @@ class CreateMessageRequest(BaseModel):
     important: bool | None = Field(False, title="Important")
     meta: Meta | None = Field({}, title="Meta")
 
+
 class CreateMessageResponse(BaseModel):
     status: str = Field(..., title="Status")
 
@@ -107,7 +108,7 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
             del postbox_meta["_id"], postbox_meta["postbox_id"]
             meta = dict(postbox_meta)
         if request.meta:
-            for k,v in dict(request.meta).items():
+            for k, v in dict(request.meta).items():
                 if v:
                     meta[k] = v
         db.messages.insert_one(
