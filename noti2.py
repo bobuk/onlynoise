@@ -29,11 +29,17 @@ def send_message(db: DB, message: dict, client: APNSClient):
     if not account:
         logging.error(f"No devices found for postbox {message['postbox_id']} {message=}")
         return
+    alert = {}
+    if "sender" in message:
+        alert["title"] = message["sender"]
+        if "subject" in message:
+            alert["subtitle"] = message["subject"]
+        alert["body"] = message.get("body", None)
+    else:
+        alert["title"]=message.get("subject", None)
+        alert["body"]=message.get("body", None)
 
-    payload = IOSPayload(alert=IOSPayloadAlert(
-        title=message.get("subject", None),  # subtitle='пизда и джигурда',
-        body=message.get("body", None)
-    ))
+    payload = IOSPayload(alert=IOSPayloadAlert(**alert))
     notification = IOSNotification(payload=payload, topic='com.isnifer.balalaika')
 
     for device in account['devices']:
@@ -64,7 +70,8 @@ def main():
         while True:
             with DB as db:
                 logging.info("DB finding")
-                cursor = db.messages.find({'is_sent': False, 'is_deleted': False}, cursor_type=pymongo.CursorType.TAILABLE_AWAIT).limit(1)
+                cursor = db.messages.find({'is_sent': False, 'is_deleted': False},
+                                          cursor_type=pymongo.CursorType.TAILABLE_AWAIT).limit(1)
                 logging.info("messages found")
                 while cursor.alive:
                     for message in cursor:
