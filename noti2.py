@@ -30,8 +30,8 @@ def send_message(db: DB, message: dict, client: APNSClient):
         logging.error(f"No devices found for postbox {message['postbox_id']} {message=}")
         return
     alert = {}
-    if "sender" in message:
-        alert["title"] = message["sender"]
+    if "meta" in message and "sender" in message["meta"]:
+        alert["title"] = message["meta"]["sender"]
         if "subject" in message:
             alert["subtitle"] = message["subject"]
         alert["body"] = message.get("body", None)
