@@ -45,11 +45,7 @@ class CreatePostboxResponse(BaseModel):
     postbox_id: str = Field(..., title="Postbox ID")
 
 
-def create_random_string(length: int = 32) -> str:
-    return "".join(
-        random.choice(string.ascii_letters + string.digits) for _ in range(length)
-    )
-
+from .meta import create_random_string
 
 @router.post("/", response_model=CreateAccountResponse)
 def create_account(response: Response):

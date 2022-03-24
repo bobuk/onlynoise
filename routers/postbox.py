@@ -3,16 +3,9 @@ from pydantic import BaseModel, Field
 from mongodb import DB
 import time
 from copy import copy
-
-# import pymongo
+from routers.meta import Meta, Message, put_messsage_to_postbox
 
 router = APIRouter(prefix="/postboxes")
-
-
-class Meta(BaseModel):
-    sender: str | None = Field("", title="Sender's name")
-    icon: str | None = Field("", title="Icon from font awesome (e.g. fa-envelope)")
-    color: str | None = Field("", title="Color in hex or system name")
 
 
 class GetPostboxMetaResponse(Meta):
@@ -22,6 +15,8 @@ class GetPostboxMetaResponse(Meta):
 class SetPostboxMetaRequest(Meta):
     pass
 
+class DelPostboxResponse(BaseModel):
+    status: str = Field("ok", title="Status")
 
 class SetPostboxMetaResponse(BaseModel):
     status: str | None = Field("ok", title="Status")
@@ -40,19 +35,6 @@ class CreateMessageResponse(BaseModel):
     status: str = Field(..., title="Status")
 
 
-class Message(BaseModel):
-    id: str = Field(..., title="Unique Message ID")
-    subject: str | None = Field("", title="Subject")
-    body: str | None = Field("", title="Body")
-    url: str | None = Field("", title="URL")
-    image_url: str | None = Field("", title="Image URL")
-    important: bool = Field(False, title="Important")
-
-    meta: Meta | None = Field({}, title="Meta")
-
-    postbox_id: str = Field(..., title="Postbox ID")
-    created_at: int = Field(..., title="Created At")
-
 
 class GetMessagesResponse(BaseModel):
     messages: list[Message] = Field(..., title="Messages list")
@@ -67,8 +49,25 @@ def remove_old_messages(db, postbox_id: str):
         {"$set": {"is_deleted": True}}
     )
 
+@router.delete("/{postbox_id}", response_model=DelPostboxResponse)
+def delete_postbox(postbox_id: str, response: Response):
+    with DB as db:
+        postbox = db.postboxes.find_one({"postbox_id": postbox_id})
+        if not postbox:
+            raise HTTPException(status_code=404, detail="postbox not found")
+        response.status_code = 200
+        db.postboxes.delete_one({"postbox_id": postbox_id})
+        account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
+        if account:
+            db.accounts.update_one(
+                {"_id": account["_id"]},
+                {"$pull": {"postboxes": {"postbox_id": postbox_id}}}
+            )
+        return DelPostboxResponse(status="ok")
 
-@router.post("/{postbox_id}/meta", response_model=SetPostboxMetaResponse)
+
+
+@router.put("/{postbox_id}/meta", response_model=SetPostboxMetaResponse)
 def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: Response):
     with DB as db:
         account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
@@ -102,29 +101,7 @@ def create_message(postbox_id: str, request: CreateMessageRequest, response: Res
         account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
         if not account:
             raise HTTPException(status_code=404, detail="Postbox not found")
-        meta = {}
-        postbox_meta = db.postboxes.find_one({"postbox_id": postbox_id})
-        if postbox_meta:
-            del postbox_meta["_id"], postbox_meta["postbox_id"]
-            meta = dict(postbox_meta)
-        if request.meta:
-            for k, v in dict(request.meta).items():
-                if v:
-                    meta[k] = v
-        db.messages.insert_one(
-            {
-                "subject": request.subject,
-                "body": request.body,
-                "url": request.url,
-                "image_url": request.image_url,
-                "important": request.important,
-                "postbox_id": postbox_id,
-                "created_at": int(time.time()),
-                "is_deleted": False,
-                "is_sent": False,
-                "meta": meta,
-            }
-        )
+        put_messsage_to_postbox(db, postbox_id, request)
         # remove_old_messages(db, postbox_id)
         response.status_code = 201
         return CreateMessageResponse(status="ok")
