@@ -44,6 +44,8 @@ class CreatePostboxResponse(BaseModel):
     )
     postbox_id: str = Field(..., title="Postbox ID")
 
+class GetPostboxesResponse(BaseModel):
+    postboxes: list = Field(..., title="List of postboxes")
 
 from .meta import create_random_string
 
@@ -64,7 +66,6 @@ def create_account(response: Response):
     return CreateAccountResponse(
         status="created", account_id=account_id, created_at=created_at
     )
-
 
 @router.post("/{account_id:str}/devices", response_model=CreateDeviceResponse)
 def create_device(account_id: str, request: CreateDeviceRequest, response: Response):
@@ -95,6 +96,15 @@ def create_device(account_id: str, request: CreateDeviceRequest, response: Respo
     response.status_code = 201
     return CreateDeviceResponse(status="created", created_at=created_at)
 
+@router.get("/{account_id:str}/postboxes", response_model=GetPostboxesResponse)
+def get_postboxes(account_id: str, response: Response):
+    with DB as db:
+        account = db.accounts.find_one({"account_id": account_id})
+        if not account:
+            response.status_code = 406
+            return GetPostboxesResponse(postboxes=[])
+        return GetPostboxesResponse(postboxes = account["postboxes"])
+
 
 @router.post("/{account_id:str}/postboxes", response_model=CreatePostboxResponse)
 def create_postbox(account_id: str, response: Response):
@@ -116,6 +126,11 @@ def create_postbox(account_id: str, response: Response):
                 }
             },
         )
+        db.postboxes.insert_one({
+            "postbox_id": postbox_id,
+            "created_at": created_at,
+            "meta": {}
+        })
 
     response.status_code = 201
     return CreatePostboxResponse(

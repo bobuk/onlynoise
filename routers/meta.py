@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 import random
+import time
 import string
 
 
@@ -29,7 +30,8 @@ class Message(BaseModel):
     created_at: int = Field(..., title="Created At")
 
 def put_message_to_subscription(db, subscription_id, message):
-    subscription = db.subscriptions.find_one({"_id": subscription_id})
+    subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
+    print(subscription, f'db.subscriptions.find_one(["subscription_id": {subscription_id}])')
     if not subscription:
         return None
     subscription_meta = subscription.get("meta", {})
@@ -37,7 +39,9 @@ def put_message_to_subscription(db, subscription_id, message):
         for k, v in dict(subscription_meta).items():
             if v:
                 message.meta[k] = v
+
     for postbox in subscription.get("subscribers", []):
+        print(postbox, message)
         put_messsage_to_postbox(db, postbox, message)
 
 def put_messsage_to_postbox(db, postbox_id, message):
