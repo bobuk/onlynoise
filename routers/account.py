@@ -1,12 +1,9 @@
 import time
-import random
-import string
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
 from mongodb import DB
 from . import postbox
-
-import pymongo
+from .meta import create_random_string
 
 router = APIRouter(prefix="/accounts")
 
@@ -42,17 +39,18 @@ class CreatePostboxResponse(BaseModel):
     status: str = Field(
         default_factory=lambda: "created", title="Status of the request"
     )
-    postbox_id: str = Field(..., title="Postbox ID")
+    postbox_id: str | None = Field("", title="Postbox ID")
+
 
 class GetPostboxesResponse(BaseModel):
     postboxes: list = Field(..., title="List of postboxes")
 
-from .meta import create_random_string
 
 @router.post("/", response_model=CreateAccountResponse)
 def create_account(response: Response):
     response.status_code = 201
     account_id = create_random_string()
+
     created_at = int(time.time())
     with DB as db:
         db.accounts.insert_one(
@@ -66,6 +64,7 @@ def create_account(response: Response):
     return CreateAccountResponse(
         status="created", account_id=account_id, created_at=created_at
     )
+
 
 @router.post("/{account_id:str}/devices", response_model=CreateDeviceResponse)
 def create_device(account_id: str, request: CreateDeviceRequest, response: Response):
@@ -96,6 +95,7 @@ def create_device(account_id: str, request: CreateDeviceRequest, response: Respo
     response.status_code = 201
     return CreateDeviceResponse(status="created", created_at=created_at)
 
+
 @router.get("/{account_id:str}/postboxes", response_model=GetPostboxesResponse)
 def get_postboxes(account_id: str, response: Response):
     with DB as db:
@@ -103,7 +103,7 @@ def get_postboxes(account_id: str, response: Response):
         if not account:
             response.status_code = 406
             return GetPostboxesResponse(postboxes=[])
-        return GetPostboxesResponse(postboxes = account["postboxes"])
+        return GetPostboxesResponse(postboxes=account["postboxes"])
 
 
 @router.post("/{account_id:str}/postboxes", response_model=CreatePostboxResponse)
@@ -144,7 +144,7 @@ def get_all_messages(account_id: str, response: Response):
         account = db.accounts.find_one({"account_id": account_id})
         if not account:
             response.status_code = 200
-            return postbox.GetMessagesResponse(status="ok", messages=[])
+            return postbox.GetMessagesResponse(messages=[])
         postboxes = [x["postbox_id"] for x in account["postboxes"]]
         messages = []
         for message in db.messages.find({"postbox_id": {"$in": postboxes}}):
@@ -152,4 +152,4 @@ def get_all_messages(account_id: str, response: Response):
             messages.append(message)
 
     response.status_code = 200
-    return postbox.GetMessagesResponse(status="ok", messages=messages)
+    return postbox.GetMessagesResponse(messages=messages)

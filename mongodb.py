@@ -7,7 +7,7 @@ MONGO_HOST = os.environ.get("MONGO", "localhost")
 class MongoDB:
     def __init__(self, url: str = f"mongodb://{MONGO_HOST}:27017"):
         self.url = url
-        self.client: pymongo.MongoClient = None
+        self.client: pymongo.MongoClient | None = None
 
     def __enter__(self):
         if self.client is None:

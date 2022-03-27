@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, Response
-from pydantic import BaseModel, Field
-from mongodb import DB
 import time
 from copy import copy
-from routers.meta import Meta, Message, put_messsage_to_postbox
+
+from fastapi import APIRouter, HTTPException, Response
+from pydantic import BaseModel, Field
+
+from mongodb import DB
+from .meta import IncomingMessage, Message, Meta, put_message_to_postbox
 
 router = APIRouter(prefix="/postboxes")
 
@@ -15,25 +17,17 @@ class GetPostboxMetaResponse(Meta):
 class SetPostboxMetaRequest(Meta):
     pass
 
+
 class DelPostboxResponse(BaseModel):
     status: str = Field("ok", title="Status")
+
 
 class SetPostboxMetaResponse(BaseModel):
     status: str | None = Field("ok", title="Status")
 
 
-class CreateMessageRequest(BaseModel):
-    subject: str | None = Field("", title="Subject")
-    body: str | None = Field("", title="Body")
-    url: str | None = Field("", title="URL")
-    image_url: str | None = Field("", title="Image URL")
-    important: bool | None = Field(False, title="Important")
-    meta: Meta | None = Field({}, title="Meta")
-
-
 class CreateMessageResponse(BaseModel):
     status: str = Field(..., title="Status")
-
 
 
 class GetMessagesResponse(BaseModel):
@@ -48,6 +42,7 @@ def remove_old_messages(db, postbox_id: str):
         },
         {"$set": {"is_deleted": True}}
     )
+
 
 @router.delete("/{postbox_id}", response_model=DelPostboxResponse)
 def delete_postbox(postbox_id: str, response: Response):
@@ -64,7 +59,6 @@ def delete_postbox(postbox_id: str, response: Response):
                 {"$pull": {"postboxes": {"postbox_id": postbox_id}}}
             )
         return DelPostboxResponse(status="ok")
-
 
 
 @router.put("/{postbox_id}/meta", response_model=SetPostboxMetaResponse)
@@ -95,13 +89,13 @@ def get_postbox_meta(postbox_id: str, response: Response):
         return GetPostboxMetaResponse(sender=postbox.get("sender"), icon=postbox.get("icon"), color=postbox.get("color"))
 
 
-@router.post("/{postbox_id}/messages", response_model=CreateMessageResponse)
-def create_message(postbox_id: str, request: CreateMessageRequest, response: Response):
+@router.post("/{postbox_id}/messages", response_model=IncomingMessage)
+def create_message(postbox_id: str, request: IncomingMessage, response: Response):
     with DB as db:
         account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
         if not account:
             raise HTTPException(status_code=404, detail="Postbox not found")
-        put_messsage_to_postbox(db, postbox_id, request)
+        put_message_to_postbox(db, postbox_id, request)
         # remove_old_messages(db, postbox_id)
         response.status_code = 201
         return CreateMessageResponse(status="ok")
@@ -116,4 +110,4 @@ def get_messages(postbox_id: str, response: Response):
             del message["_id"], message["is_deleted"], message["is_sent"]
             messages.append(message)
         response.status_code = 200
-        return GetMessagesResponse(status="ok", messages=messages)
+        return GetMessagesResponse(messages=messages)

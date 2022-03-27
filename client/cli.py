@@ -1,13 +1,15 @@
-import os
 import json
+import readline
+
 import httpx
-from sseclient import SSEClient
 from rich.console import Console
 from rich.table import Table
+from sseclient import SSEClient
 
 con = Console()
 
 URL = "http://localhost:8080/v1/"
+
 
 class Config:
     def __init__(self, path=".client.json"):
@@ -26,7 +28,9 @@ class Config:
         with open(self.path, 'w') as f:
             json.dump(self.config, f)
 
+
 C = Config()
+
 
 def wait_messages():
     con.print("Messages", style="bold blue")
@@ -47,6 +51,7 @@ def list_postboxes():
         table.add_row(str(box["postbox_id"]), str(box["created_at"]))
     con.print(table)
 
+
 def messages_table():
     req = httpx.get(URL + f"accounts/{C.get('account_id')}/messages").json()
     table = Table(show_header=True, header_style="bold blue")
@@ -59,6 +64,7 @@ def messages_table():
     for msg in req["messages"]:
         table.add_row(msg['id'], msg["subject"], msg["body"], msg["postbox_id"])
     con.print(table)
+
 
 def main():
     if not C.get("account_id"):
@@ -116,7 +122,7 @@ def main():
             else:
                 con.print(f"Error: {req.json()}", style="bold red")
         elif cmd.startswith("send to "):
-            cmd = cmd.split(" ",3)[2:]
+            cmd = cmd.split(" ", 3)[2:]
             if len(cmd) != 2:
                 con.print("Usage: send to <box_id | @sub_id> <message>", style="bold red")
                 continue
@@ -129,7 +135,6 @@ def main():
                 con.print(f"Sent to {box_id}", style="bold green")
             else:
                 con.print(f"Error: {req.json()}", style="bold red")
-
 
 
 if __name__ == "__main__":

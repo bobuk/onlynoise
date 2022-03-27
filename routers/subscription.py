@@ -1,22 +1,13 @@
 import time
+
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
-from mongodb import DB
-from .meta import Meta, create_random_string, Message, put_message_to_subscription
 
-import pymongo
+from mongodb import DB
+from .meta import IncomingMessage, Meta, create_random_string, put_message_to_subscription
 
 router = APIRouter(prefix="/subscriptions")
 
-
-class MessageToSubscription(BaseModel):
-    subject: str | None = Field("", title="Subject")
-    body: str | None = Field("", title="Body")
-    url: str | None = Field("", title="URL")
-    image_url: str | None = Field("", title="Image URL")
-    important: bool | None = Field(False, title="Important")
-
-    meta: Meta | None = Field({}, title="Meta")
 
 class CreateSubscriptionRequest(BaseModel):
     account_id: str = Field(..., title="Account ID")
@@ -24,7 +15,7 @@ class CreateSubscriptionRequest(BaseModel):
     meta: Meta | None = Field(default_factory=Meta, title="Meta data")
 
 
-class SendMessageToSubsription(BaseModel):
+class SendMessageToSubscription(BaseModel):
     status: str = Field(default="ok", title="Status")
 
 
@@ -86,20 +77,22 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
                 "updated_at": int(time.time()),
             }}
         )
+    response.status_code = 201
     return CreateSubscriptionResponse(
         status="updated", subscription_id=subscription_id, unique_id=subscription["unique_id"], created_at=subscription["created_at"], meta=request.meta
     )
 
 
-@router.post("/{subscription_id}/messages", response_model=SendMessageToSubsription)
-def send_subscription_message(subscription_id: str, request: MessageToSubscription, response: Response):
+@router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription)
+def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
     with DB as db:
         subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
         if not subscription:
             raise HTTPException(status_code=400, detail="Subscription with this ID does not exist")
         put_message_to_subscription(db, subscription_id, request)
         db.subsriptions.update_one({"_id": subscription["_id"]}, {"$set": {"updated_at": int(time.time())}})
-    return SendMessageToSubsription(status="ok")
+    response.status_code = 202
+    return SendMessageToSubscription(status="ok")
 
 
 @router.post("/{unique_id}", response_model=SubscribePostboxToSubscriptionResponse)
@@ -114,4 +107,5 @@ def subscribe_postbox_to_subscription(unique_id: str, request: SubscribePostboxT
         if postbox["postbox_id"] in subscription["subscribers"]:
             raise HTTPException(status_code=400, detail="Postbox is already subscribed to this subscription")
         db.subscriptions.update_one({"_id": subscription["_id"]}, {"$push": {"subscribers": postbox["postbox_id"]}})
+    response.status_code = 202
     return SubscribePostboxToSubscriptionResponse(status="ok")

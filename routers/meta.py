@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
 import random
-import time
 import string
+import time
+
+from pydantic import BaseModel, Field
 
 
 def create_random_string(length: int = 32) -> str:
@@ -29,6 +30,16 @@ class Message(BaseModel):
     postbox_id: str = Field(..., title="Postbox ID")
     created_at: int = Field(..., title="Created At")
 
+
+class IncomingMessage(BaseModel):
+    subject: str | None = Field("", title="Subject")
+    body: str | None = Field("", title="Body")
+    url: str | None = Field("", title="URL")
+    image_url: str | None = Field("", title="Image URL")
+    important: bool | None = Field(False, title="Important")
+    meta: Meta | None = Field({}, title="Meta")
+
+
 def put_message_to_subscription(db, subscription_id, message):
     subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
     print(subscription, f'db.subscriptions.find_one(["subscription_id": {subscription_id}])')
@@ -42,9 +53,10 @@ def put_message_to_subscription(db, subscription_id, message):
 
     for postbox in subscription.get("subscribers", []):
         print(postbox, message)
-        put_messsage_to_postbox(db, postbox, message)
+        put_message_to_postbox(db, postbox, message)
 
-def put_messsage_to_postbox(db, postbox_id, message):
+
+def put_message_to_postbox(db, postbox_id, message):
     meta = {}
     postbox_meta = db.postboxes.find_one({"postbox_id": postbox_id})
     if postbox_meta:
