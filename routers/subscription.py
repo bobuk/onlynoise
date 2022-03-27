@@ -89,7 +89,7 @@ def send_subscription_message(subscription_id: str, request: IncomingMessage, re
         subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
         if not subscription:
             raise HTTPException(status_code=400, detail="Subscription with this ID does not exist")
-        put_message_to_subscription(db, subscription_id, request.json())
+        put_message_to_subscription(db, subscription_id, request.dict())
         db.subsriptions.update_one({"_id": subscription["_id"]}, {"$set": {"updated_at": int(time.time())}})
     response.status_code = 202
     return SendMessageToSubscription(status="ok")
