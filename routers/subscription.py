@@ -101,7 +101,7 @@ def subscribe_postbox_to_subscription(unique_id: str, request: SubscribePostboxT
         subscription = db.subscriptions.find_one({"unique_id": unique_id})
         if not subscription:
             raise HTTPException(status_code=400, detail="Subscription with this name does not exist")
-        account = db.accounts.find_one({"postbox.postbox_id": request.postbox_id})
+        account = db.accounts.find_one({"postboxes.postbox_id": request.postbox_id})
         if not account:
             raise HTTPException(status_code=400, detail="Postbox with this ID does not exist")
         if request.postbox_id in subscription["subscribers"]:
