@@ -49,7 +49,7 @@ def put_message_to_subscription(db, subscription_id, message):
     if subscription_meta:
         for k, v in dict(subscription_meta).items():
             if v:
-                message.meta[k] = v
+                message["meta"][k] = v
 
     for postbox in subscription.get("subscribers", []):
         print(postbox, message)
@@ -62,17 +62,17 @@ def put_message_to_postbox(db, postbox_id, message):
     if postbox_meta:
         del postbox_meta["_id"], postbox_meta["postbox_id"]
         meta = dict(postbox_meta)
-    if message.meta:
-        for k, v in dict(message.meta).items():
+    if message["meta"]:
+        for k, v in message["meta"].items():
             if v:
                 meta[k] = v
     db.messages.insert_one(
         {
-            "subject": message.subject,
-            "body": message.body,
-            "url": message.url,
-            "image_url": message.image_url,
-            "important": message.important,
+            "subject": message["subject"],
+            "body": message["body"],
+            "url": message["url"],
+            "image_url": message["image_url"],
+            "important": message["important"],
             "postbox_id": postbox_id,
             "created_at": int(time.time()),
             "is_deleted": False,
