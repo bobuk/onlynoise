@@ -101,11 +101,11 @@ def subscribe_postbox_to_subscription(unique_id: str, request: SubscribePostboxT
         subscription = db.subscriptions.find_one({"unique_id": unique_id})
         if not subscription:
             raise HTTPException(status_code=400, detail="Subscription with this name does not exist")
-        postbox = db.postboxes.find_one({"postbox_id": request.postbox_id})
-        if not postbox:
+        account = db.accounts.find_one({"postbox.postbox_id": request.postbox_id})
+        if not account:
             raise HTTPException(status_code=400, detail="Postbox with this ID does not exist")
-        if postbox["postbox_id"] in subscription["subscribers"]:
+        if request.postbox_id in subscription["subscribers"]:
             raise HTTPException(status_code=400, detail="Postbox is already subscribed to this subscription")
-        db.subscriptions.update_one({"_id": subscription["_id"]}, {"$push": {"subscribers": postbox["postbox_id"]}})
+        db.subscriptions.update_one({"_id": subscription["_id"]}, {"$push": {"subscribers": request.postbox_id}})
     response.status_code = 202
     return SubscribePostboxToSubscriptionResponse(status="ok")

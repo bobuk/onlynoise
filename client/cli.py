@@ -1,5 +1,6 @@
 import json
 import readline
+import os
 
 import httpx
 from rich.console import Console
@@ -8,7 +9,7 @@ from sseclient import SSEClient
 
 con = Console()
 
-URL = "http://localhost:8080/v1/"
+URL = "https://onlynoise.rubedo.cloud/v1/" if os.environ.get("RELEASE") else "https://localhost:8080/v1/"
 
 
 class Config:

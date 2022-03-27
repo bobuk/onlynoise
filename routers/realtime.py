@@ -1,13 +1,12 @@
-import asyncio, os
-import motor.motor_asyncio
-import pymongo
+import asyncio
 import json
-
-from sse_starlette.sse import EventSourceResponse
-from fastapi import APIRouter, HTTPException, Response,Request
-
+import os
 from copy import copy
 
+import motor.motor_asyncio
+import pymongo
+from fastapi import APIRouter, Request
+from sse_starlette.sse import EventSourceResponse
 
 MONGO_HOST = os.environ.get("MONGO", "localhost")
 
@@ -20,12 +19,13 @@ async def postboxes_list(db, account_id: str) -> list[str]:
         return []
     return [postbox["postbox_id"] for postbox in account["postboxes"]]
 
+
 client = motor.motor_asyncio.AsyncIOMotorClient(f"mongodb://{MONGO_HOST}:27017")
+
 
 @router.get("/accounts/{account_id:str}/messages")
 async def eventsource_get_account_messages(account_id: str, request: Request):
     db = client.ondb
-
 
     async def event_generator():
         first_run = True
@@ -47,7 +47,7 @@ async def eventsource_get_account_messages(account_id: str, request: Request):
                     message["id"] = copy(str(message["_id"]))
                     del message["_id"], message["is_deleted"], message["is_sent"]
                     if not first_run:
-                        yield {"data": json.dumps(message, ensure_ascii=False) }
+                        yield {"data": json.dumps(message, ensure_ascii=False)}
                 first_run = False
             await asyncio.sleep(1)
 
