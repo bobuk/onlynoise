@@ -3,7 +3,7 @@ from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
 from mongodb import DB
 from . import postbox
-from .meta import create_random_string
+from .meta import create_random_string, Meta
 
 router = APIRouter(prefix="/accounts")
 
@@ -45,6 +45,13 @@ class CreatePostboxResponse(BaseModel):
 class GetPostboxesResponse(BaseModel):
     postboxes: list = Field(..., title="List of postboxes")
 
+
+class CreateSubscriptionRequest(BaseModel):
+    unique_id: str = Field(..., title="Unique subscription ID")
+    meta: Meta | None = Field(None, title="Meta data")
+
+class CreateSubscriptionResponse(BaseModel):
+    status: str = Field("ok", title="Status of the request")
 
 @router.post("/", response_model=CreateAccountResponse)
 def create_account(response: Response):
@@ -137,6 +144,38 @@ def create_postbox(account_id: str, response: Response):
         status="created", postbox_id=postbox_id, created_at=created_at
     )
 
+@router.post("/{account_id:str}/subscriptions", response_model=CreateSubscriptionResponse)
+def create_subscription(account_id: str, request: CreateSubscriptionRequest, response: Response):
+    with DB as db:
+        account = db.accounts.find_one({"account_id": account_id})
+        if not account:
+            response.status_code = 406
+            return CreateSubscriptionResponse(status="account_id not found")
+        subscription = db.subscriptions.find_one({"unique_id": request.unique_id})
+        if not subscription:
+            response.status_code = 406
+            return CreateSubscriptionResponse(status="subscription not found")
+        created_at = int(time.time())
+        postbox_id = create_random_string()
+        db.accounts.update_one(
+            {"account_id": account_id},
+            {
+                "$push": {
+                    "postboxes": {
+                        "postbox_id": postbox_id,
+                        "created_at": created_at,
+                    }
+                }
+            },
+        )
+        db.postboxes.insert_one({
+            "postbox_id": postbox_id,
+            "created_at": created_at,
+            "meta": dict(request.meta if request.meta else {})
+        })
+        db.subscriptions.update_one({"_id": subscription["_id"]}, {"$push": {"subscribers": postbox_id}})
+        response.status_code = 201
+        return CreateSubscriptionResponse(status="created")
 
 @router.get("/{account_id:str}/messages", response_model=postbox.GetMessagesResponse)
 def get_all_messages(account_id: str, response: Response):
