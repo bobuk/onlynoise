@@ -46,11 +46,15 @@ def put_message_to_subscription(db, subscription_id, message):
     if not subscription:
         return None
     subscription_meta = subscription.get("meta", {})
+    print(message)
+    try:
+        message["meta"] = dict(message["meta"])
+    except:
+        pass
     if subscription_meta:
         for k, v in dict(subscription_meta).items():
             if v:
                 message["meta"][k] = v
-
     for postbox in subscription.get("subscribers", []):
         print(postbox, message)
         put_message_to_postbox(db, postbox, message)
