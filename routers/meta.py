@@ -45,11 +45,10 @@ def put_message_to_subscription(db, subscription_id, message):
     print(subscription, f'db.subscriptions.find_one(["subscription_id": {subscription_id}])')
     if not subscription:
         return None
-    subscription_meta = subscription.get("meta", {})
-    if subscription_meta:
-        for k, v in dict(subscription_meta).items():
-            if v:
-                message["meta"][k] = v
+    meta = subscription.get("meta", {})
+    for k, v in dict(message["meta"]).items():
+        if v:
+            meta[k] = v
     for postbox in subscription.get("subscribers", []):
         print(postbox, message)
         put_message_to_postbox(db, postbox, message)
