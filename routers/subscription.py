@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from mongodb import DB
-from .meta import IncomingMessage, Meta, create_random_string, put_message_to_subscription
+from .meta import IncomingMessage, Meta, create_random_string, efl, put_message_to_subscription
 
 router = APIRouter(prefix="/subscriptions")
 
@@ -41,7 +41,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
         request.unique_id = create_random_string()
     subscription_id = create_random_string()
     with DB as db:
-        if db.subscriptions.find_one({"unique_id": request.unique_id}) or db.subscriptions.find_one({"subscription_id": subscription_id}):
+        if db.accounts.find_one({"subscriptions.unique_id": request.unique_id}):
             raise HTTPException(status_code=400, detail="Subscription with this unique ID already exists")
         acc = db.accounts.find_one({"account_id": request.account_id})
         if not acc:
@@ -49,16 +49,16 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
 
     response.status_code = 201
     created_at = int(time.time())
+    sub = {
+        "subscription_id": subscription_id,
+        "unique_id": request.unique_id,
+        "created_at": created_at,
+        "updated_at": created_at,
+        "meta": request.meta.dict(),
+        "subscribers": [],
+    }
     with DB as db:
-        db.subscriptions.insert_one({
-            "account_id": request.account_id,
-            "subscription_id": subscription_id,
-            "unique_id": request.unique_id,
-            "created_at": created_at,
-            "updated_at": created_at,
-            "meta": request.meta.dict(),
-            "subscribers": [],
-        })
+        db.accounts.update_one({"account_id": request.account_id}, {"$push": {"subscriptions": sub}})
     return CreateSubscriptionResponse(
         status="created", subscription_id=subscription_id, unique_id=request.unique_id, created_at=created_at, meta=request.meta
     )
@@ -67,16 +67,15 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
 @router.put("/{subscription_id}/meta", response_model=CreateSubscriptionResponse)
 def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRequest, response: Response):
     with DB as db:
-        subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
-        if not subscription:
+        account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
+        if not account:
             raise HTTPException(status_code=400, detail="Subscription with this ID does not exist")
-        db.subscriptions.update_one(
-            {"subscription_id": subscription_id},
+        subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
+        db.account.update_one(
+            {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
             {"$set": {
-                "meta": request.meta,
-                "updated_at": int(time.time()),
-            }}
-        )
+                "subscriptions.$.meta": request.meta.dict(),
+                "subscriptions.$.updated_at": int(time.time())}})
     response.status_code = 201
     return CreateSubscriptionResponse(
         status="updated", subscription_id=subscription_id, unique_id=subscription["unique_id"], created_at=subscription["created_at"], meta=request.meta
@@ -86,11 +85,14 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
 @router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription)
 def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
     with DB as db:
-        subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
-        if not subscription:
+        account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
+        if not account:
             raise HTTPException(status_code=400, detail="Subscription with this ID does not exist")
         put_message_to_subscription(db, subscription_id, request.dict())
-        db.subsriptions.update_one({"_id": subscription["_id"]}, {"$set": {"updated_at": int(time.time())}})
+
+        db.accounts.update_one(
+            {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
+            {"$set": {"subscriptions.$.updated_at": int(time.time())}})
     response.status_code = 202
     return SendMessageToSubscription(status="ok")
 
@@ -98,14 +100,17 @@ def send_subscription_message(subscription_id: str, request: IncomingMessage, re
 @router.post("/{unique_id}", response_model=SubscribePostboxToSubscriptionResponse)
 def subscribe_postbox_to_subscription(unique_id: str, request: SubscribePostboxToSubscriptionRequest, response: Response):
     with DB as db:
-        subscription = db.subscriptions.find_one({"unique_id": unique_id})
-        if not subscription:
+        subscription_account = db.accounts.find_one({"subscriptions.unique_id": unique_id})
+        if not subscription_account:
             raise HTTPException(status_code=400, detail="Subscription with this name does not exist")
         account = db.accounts.find_one({"postboxes.postbox_id": request.postbox_id})
         if not account:
             raise HTTPException(status_code=400, detail="Postbox with this ID does not exist")
-        if request.postbox_id in subscription["subscribers"]:
+        subscription = efl(subscription_account["subscriptions"], "unique_id", unique_id)
+        if request.postbox_id in subscription.get("subscribers", []):
             raise HTTPException(status_code=400, detail="Postbox is already subscribed to this subscription")
-        db.subscriptions.update_one({"_id": subscription["_id"]}, {"$push": {"subscribers": request.postbox_id}})
+        db.accounts.update_one(
+            {"_id": subscription_account["_id"], "subscriptions.unique_id": unique_id},
+            {"$push": {"subscriptions.$.subscribers": request.postbox_id}})
     response.status_code = 202
     return SubscribePostboxToSubscriptionResponse(status="ok")

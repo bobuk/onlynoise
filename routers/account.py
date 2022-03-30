@@ -1,9 +1,11 @@
 import time
+
 from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
+
 from mongodb import DB
 from . import postbox
-from .meta import create_random_string, Meta
+from .meta import Meta, create_random_string
 
 router = APIRouter(prefix="/accounts")
 
@@ -50,8 +52,10 @@ class CreateSubscriptionRequest(BaseModel):
     unique_id: str = Field(..., title="Unique subscription ID")
     meta: Meta | None = Field(None, title="Meta data")
 
+
 class CreateSubscriptionResponse(BaseModel):
     status: str = Field("ok", title="Status of the request")
+
 
 @router.post("/", response_model=CreateAccountResponse)
 def create_account(response: Response):
@@ -66,6 +70,7 @@ def create_account(response: Response):
                 "created_at": created_at,
                 "devices": [],
                 "postboxes": [],
+                "subscriptions": []
             }
         )
     return CreateAccountResponse(
@@ -129,20 +134,17 @@ def create_postbox(account_id: str, response: Response):
                     "postboxes": {
                         "postbox_id": postbox_id,
                         "created_at": created_at,
+                        "meta": {}
                     }
                 }
             },
         )
-        db.postboxes.insert_one({
-            "postbox_id": postbox_id,
-            "created_at": created_at,
-            "meta": {}
-        })
 
     response.status_code = 201
     return CreatePostboxResponse(
         status="created", postbox_id=postbox_id, created_at=created_at
     )
+
 
 @router.post("/{account_id:str}/subscriptions", response_model=CreateSubscriptionResponse)
 def create_subscription(account_id: str, request: CreateSubscriptionRequest, response: Response):
@@ -151,8 +153,8 @@ def create_subscription(account_id: str, request: CreateSubscriptionRequest, res
         if not account:
             response.status_code = 406
             return CreateSubscriptionResponse(status="account_id not found")
-        subscription = db.subscriptions.find_one({"unique_id": request.unique_id})
-        if not subscription:
+        subscription_account = db.accounts.find_one({"subscriptions.unique_id": request.unique_id})
+        if not subscription_account:
             response.status_code = 406
             return CreateSubscriptionResponse(status="subscription not found")
         created_at = int(time.time())
@@ -164,29 +166,23 @@ def create_subscription(account_id: str, request: CreateSubscriptionRequest, res
                     "postboxes": {
                         "postbox_id": postbox_id,
                         "created_at": created_at,
+                        "meta": dict(request.meta if request.meta else {})
                     }
                 }
             },
         )
-        db.postboxes.insert_one({
-            "postbox_id": postbox_id,
-            "created_at": created_at,
-            "meta": dict(request.meta if request.meta else {})
-        })
-        db.subscriptions.update_one({"_id": subscription["_id"]}, {"$push": {"subscribers": postbox_id}})
+        db.accounts.update_one(
+            {"_id": subscription_account["_id"], "subscriptions.unique_id": request.unique_id},
+            {"$push": {"subscriptions.$.subscribers": postbox_id}})
         response.status_code = 201
         return CreateSubscriptionResponse(status="created")
 
+
 @router.get("/{account_id:str}/messages", response_model=postbox.GetMessagesResponse)
 def get_all_messages(account_id: str, response: Response):
+    messages = []
     with DB as db:
-        account = db.accounts.find_one({"account_id": account_id})
-        if not account:
-            response.status_code = 200
-            return postbox.GetMessagesResponse(messages=[])
-        postboxes = [x["postbox_id"] for x in account["postboxes"]]
-        messages = []
-        for message in db.messages.find({"postbox_id": {"$in": postboxes}}):
+        for message in db.messages.find({"account_id": account_id}):
             message["id"] = str(message["_id"])
             messages.append(message)
 

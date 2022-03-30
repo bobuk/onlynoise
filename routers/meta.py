@@ -11,6 +11,13 @@ def create_random_string(length: int = 32) -> str:
     )
 
 
+def efl(d: list[dict], key: str, value: [str, int]) -> dict:
+    for e in d:
+        if e[key] == value:
+            return e
+    return {}
+
+
 class Meta(BaseModel):
     sender: str | None = Field("", title="Sender's name")
     icon: str | None = Field("", title="Icon from font awesome (e.g. fa-envelope)")
@@ -41,8 +48,8 @@ class IncomingMessage(BaseModel):
 
 
 def put_message_to_subscription(db, subscription_id, message):
-    subscription = db.subscriptions.find_one({"subscription_id": subscription_id})
-    print(subscription, f'db.subscriptions.find_one(["subscription_id": {subscription_id}])')
+    account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
+    subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
     if not subscription:
         return None
     meta = subscription.get("meta", {})
@@ -54,16 +61,14 @@ def put_message_to_subscription(db, subscription_id, message):
         put_message_to_postbox(db, postbox, message)
 
 
-def put_message_to_postbox(db, postbox_id, message):
-    meta = {}
-    postbox_meta = db.postboxes.find_one({"postbox_id": postbox_id})
-    if postbox_meta:
-        del postbox_meta["_id"], postbox_meta["postbox_id"]
-        meta = dict(postbox_meta)
-    if message["meta"]:
-        for k, v in message["meta"].items():
-            if v:
-                meta[k] = v
+def put_message_to_postbox(db, postbox_id, message) -> bool:
+    account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
+    if not account:
+        return False
+    meta = efl(account["postboxes"], "postbox_id", postbox_id).get("meta", {})
+    for k, v in message.get("meta", {}).items():
+        if v:
+            meta[k] = v
     db.messages.insert_one(
         {
             "subject": message["subject"],
@@ -71,6 +76,7 @@ def put_message_to_postbox(db, postbox_id, message):
             "url": message["url"],
             "image_url": message["image_url"],
             "important": message["important"],
+            "account_id": account["account_id"],
             "postbox_id": postbox_id,
             "created_at": int(time.time()),
             "is_deleted": False,
@@ -78,3 +84,4 @@ def put_message_to_postbox(db, postbox_id, message):
             "meta": meta,
         }
     )
+    return True
