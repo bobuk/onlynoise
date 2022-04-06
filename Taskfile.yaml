@@ -15,3 +15,12 @@ tasks:
     cmds:
       - docker build -t docker.rubedo.cloud/onlynoise-push:latest -f docker/Dockerfile.push .
       - docker push docker.rubedo.cloud/onlynoise-push:latest
+
+  rebuild:
+    cmds:
+      - git push build main
+      - drone build create bobuk/onlynoise
+
+  restart:
+    cmds:
+      - ssh dev.rubedo.cloud "cd /srv/run/onlynoise/ && doppler run -- task"
