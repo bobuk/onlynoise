@@ -9,7 +9,7 @@ from pyapns_client import APNSClient, APNSDeviceException, APNSProgrammingExcept
 
 from mongodb import DB
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 class DopplerFile:
