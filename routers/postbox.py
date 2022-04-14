@@ -44,7 +44,7 @@ def remove_old_messages(db, account_id: str):
     )
 
 
-@router.delete("/{postbox_id}", response_model=DelPostboxResponse)
+@router.delete("/{postbox_id}", response_model=DelPostboxResponse, summary="delete postbox (and unsubsribe from the subscription)")
 def delete_postbox(postbox_id: str, response: Response):
     with DB as db:
         response.status_code = 200
@@ -54,12 +54,18 @@ def delete_postbox(postbox_id: str, response: Response):
                 {"_id": account["_id"]},
                 {"$pull": {"postboxes": {"postbox_id": postbox_id}}}
             )
+            unique_id = efl(account["postboxes"], "postbox_id", postbox_id).get("subscription")
+            if unique_id:
+                db.subscriptions.update_one(
+                    {"unique_id": unique_id},
+                    {"$pull": {"subscribers": postbox_id}}
+                )
         else:
             raise HTTPException(status_code=404, detail="postbox not found")
         return DelPostboxResponse(status="ok")
 
 
-@router.put("/{postbox_id}/meta", response_model=SetPostboxMetaResponse)
+@router.put("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="set postbox properties")
 def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: Response):
     with DB as db:
         account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
@@ -76,7 +82,7 @@ def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: 
         return SetPostboxMetaResponse(status="ok")
 
 
-@router.get("/{postbox_id}/meta", response_model=GetPostboxMetaResponse)
+@router.get("/{postbox_id}/meta", response_model=GetPostboxMetaResponse, summary="get postbox properties")
 def get_postbox_meta(postbox_id: str, response: Response):
     with DB as db:
         account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
@@ -87,7 +93,7 @@ def get_postbox_meta(postbox_id: str, response: Response):
         return GetPostboxMetaResponse(sender=postbox.get("sender"), icon=postbox.get("icon"), color=postbox.get("color"))
 
 
-@router.post("/{postbox_id}/messages", response_model=IncomingMessage)
+@router.post("/{postbox_id}/messages", response_model=IncomingMessage, include_in_schema=False)
 def create_message(postbox_id: str, request: IncomingMessage, response: Response):
     with DB as db:
         if not put_message_to_postbox(db, postbox_id, request.dict()):
@@ -96,7 +102,7 @@ def create_message(postbox_id: str, request: IncomingMessage, response: Response
         return CreateMessageResponse(status="ok")
 
 
-@router.get("/{postbox_id}/messages", response_model=GetMessagesResponse)
+@router.get("/{postbox_id}/messages", response_model=GetMessagesResponse, summary="get list of messages for an postbox")
 def get_messages(postbox_id: str, response: Response):
     with DB as db:
         messages = []

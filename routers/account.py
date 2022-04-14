@@ -1,11 +1,11 @@
 import time
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from mongodb import DB
 from . import postbox
-from .meta import Meta, create_random_string
+from .meta import IncomingMessage, Meta, create_random_string, put_message_to_subscription, efl, db_get_account
 
 router = APIRouter(prefix="/accounts")
 
@@ -18,6 +18,17 @@ class CreateAccountResponse(BaseModel):
     status: str = Field(
         default_factory=lambda: "created", title="Status of the request"
     )
+
+
+class GetAccountResponse(BaseModel):
+    account_id: str = Field(..., title="Account ID, prob 32 characters long")
+    created_at: int = Field(
+        default_factory=lambda: int(time.time()), title="Unix timestamp"
+    )
+    status: str = Field("created", title="Status of the request")
+    devices: list = Field(default_factory=list, title="List of devices associated with the account")
+    postboxes: list = Field(default_factory=list, title="List of postboxes")
+    subscriptions: list = Field(default_factory=list, title="List of subscriptions")
 
 
 class CreateDeviceResponse(BaseModel):
@@ -35,13 +46,14 @@ class CreateDeviceRequest(BaseModel):
 
 
 class CreatePostboxResponse(BaseModel):
-    created_at: int = Field(
-        default_factory=lambda: int(time.time()), title="Unix timestamp"
-    )
+    subscription: str | None = Field("", title="Subscription Unique ID")
+    postbox_id: str | None = Field("", title="Postbox ID")
     status: str = Field(
         default_factory=lambda: "created", title="Status of the request"
     )
-    postbox_id: str | None = Field("", title="Postbox ID")
+    created_at: int = Field(
+        default_factory=lambda: int(time.time()), title="Unix timestamp"
+    )
 
 
 class GetPostboxesResponse(BaseModel):
@@ -57,7 +69,11 @@ class CreateSubscriptionResponse(BaseModel):
     status: str = Field("ok", title="Status of the request")
 
 
-@router.post("/", response_model=CreateAccountResponse)
+class PublishMessageToSubscriptionResponse(BaseModel):
+    status: str = Field("ok", title="Status of the request")
+
+
+@router.post("/", response_model=CreateAccountResponse, summary="Create an account")
 def create_account(response: Response):
     response.status_code = 201
     account_id = create_random_string()
@@ -78,7 +94,23 @@ def create_account(response: Response):
     )
 
 
-@router.post("/{account_id:str}/devices", response_model=CreateDeviceResponse)
+@router.get("/{account_id:str}", response_model=GetAccountResponse, summary="Get an account info by ID")
+def get_account(account_id: str, response: Response):
+    with DB as db:
+        account = db.accounts.find_one({"account_id": account_id})
+        if not account:
+            raise HTTPException(status_code=404, detail="account not found")
+        return GetAccountResponse(
+            account_id=account_id,
+            status="ok",
+            created_at=account["created_at"],
+            devices=account["devices"],
+            postboxes=account["postboxes"],
+            subscriptions=account["subscriptions"],
+        )
+
+
+@router.post("/{account_id:str}/devices", response_model=CreateDeviceResponse, summary="Add a device to an account")
 def create_device(account_id: str, request: CreateDeviceRequest, response: Response):
     created_at = int(time.time())
     with DB as db:
@@ -108,7 +140,7 @@ def create_device(account_id: str, request: CreateDeviceRequest, response: Respo
     return CreateDeviceResponse(status="created", created_at=created_at)
 
 
-@router.get("/{account_id:str}/postboxes", response_model=GetPostboxesResponse)
+@router.get("/{account_id:str}/postboxes", response_model=GetPostboxesResponse, summary="Get list of postboxes of an account")
 def get_postboxes(account_id: str, response: Response):
     with DB as db:
         account = db.accounts.find_one({"account_id": account_id})
@@ -118,7 +150,7 @@ def get_postboxes(account_id: str, response: Response):
         return GetPostboxesResponse(postboxes=account["postboxes"])
 
 
-@router.post("/{account_id:str}/postboxes", response_model=CreatePostboxResponse)
+@router.post("/{account_id:str}/postboxes", response_model=CreatePostboxResponse, include_in_schema=False)
 def create_postbox(account_id: str, response: Response):
     created_at = int(time.time())
     with DB as db:
@@ -133,20 +165,20 @@ def create_postbox(account_id: str, response: Response):
                 "$push": {
                     "postboxes": {
                         "postbox_id": postbox_id,
+                        "subscription": None,
                         "created_at": created_at,
                         "meta": {}
                     }
                 }
             },
         )
-
     response.status_code = 201
     return CreatePostboxResponse(
         status="created", postbox_id=postbox_id, created_at=created_at
     )
 
 
-@router.post("/{account_id:str}/subscriptions", response_model=CreateSubscriptionResponse)
+@router.post("/{account_id:str}/subscriptions", response_model=CreateSubscriptionResponse, summary="Subscribe account to a subscription")
 def create_subscription(account_id: str, request: CreateSubscriptionRequest, response: Response):
     with DB as db:
         account = db.accounts.find_one({"account_id": account_id})
@@ -165,6 +197,7 @@ def create_subscription(account_id: str, request: CreateSubscriptionRequest, res
                 "$push": {
                     "postboxes": {
                         "postbox_id": postbox_id,
+                        "subscription": request.unique_id,
                         "created_at": created_at,
                         "meta": dict(request.meta if request.meta else {})
                     }
@@ -178,7 +211,25 @@ def create_subscription(account_id: str, request: CreateSubscriptionRequest, res
         return CreateSubscriptionResponse(status="created")
 
 
-@router.get("/{account_id:str}/messages", response_model=postbox.GetMessagesResponse)
+@router.post("/{account_id:str}/subscriptions/{unique_id:str}",
+             response_model=PublishMessageToSubscriptionResponse,
+             summary="Send message to subscription owned by account")
+def send_subscription_message(account_id: str, unique_id: str, request: IncomingMessage, response: Response):
+    with DB as db:
+        account = db_get_account(db, account_id, exception="Subscription with this ID does not exist")
+        subscriptions = account["subscriptions"]
+        subscription = efl(subscriptions, "unique_id", unique_id)
+        if not subscription:
+            raise HTTPException(status_code=400, detail=f"Subscription `{unique_id}` not belong to this account")
+        put_message_to_subscription(db, subscription["subscription_id"], request.dict())
+        db.accounts.update_one(
+            {"_id": account["_id"], "subscriptions.subscription_id": subscription["subscription_id"]},
+            {"$set": {"subscriptions.$.updated_at": int(time.time())}})
+    response.status_code = 202
+    return PublishMessageToSubscriptionResponse(status="ok")
+
+
+@router.get("/{account_id:str}/messages", response_model=postbox.GetMessagesResponse, summary="Get all messages from an account")
 def get_all_messages(account_id: str, response: Response):
     messages = []
     with DB as db:

@@ -1,7 +1,7 @@
 import random
 import string
 import time
-
+from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
 
@@ -45,6 +45,12 @@ class IncomingMessage(BaseModel):
     image_url: str | None = Field("", title="Image URL")
     important: bool | None = Field(False, title="Important")
     meta: Meta | None = Field({}, title="Meta")
+
+def db_get_account(db: any, account_id: str, exception = None ):
+    account = db.accounts.find_one({"account_id": account_id})
+    if not account:
+        raise HTTPException(status_code=400, detail=exception if exception else f"Account {account_id} not found")
+    return account
 
 
 def put_message_to_subscription(db, subscription_id, message):

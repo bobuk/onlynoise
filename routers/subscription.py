@@ -27,15 +27,7 @@ class CreateSubscriptionResponse(BaseModel):
     meta: Meta | None = Field(default_factory=Meta, title="Meta data")
 
 
-class SubscribePostboxToSubscriptionRequest(BaseModel):
-    postbox_id: str = Field(..., title="Postbox ID")
-
-
-class SubscribePostboxToSubscriptionResponse(BaseModel):
-    status: str = Field(default="ok", title="Status")
-
-
-@router.post("/", response_model=CreateSubscriptionResponse)
+@router.post("/", response_model=CreateSubscriptionResponse, summary="Create a new subscription with unique ID")
 def create_subscription(request: CreateSubscriptionRequest, response: Response):
     if request.unique_id is None:
         request.unique_id = create_random_string()
@@ -64,7 +56,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
     )
 
 
-@router.put("/{subscription_id}/meta", response_model=CreateSubscriptionResponse)
+@router.put("/{subscription_id}/meta", response_model=CreateSubscriptionResponse, summary="Update subscription meta data")
 def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRequest, response: Response):
     with DB as db:
         account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
@@ -82,7 +74,7 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
     )
 
 
-@router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription)
+@router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription, summary="Send message to subscription")
 def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
     with DB as db:
         account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
@@ -96,21 +88,3 @@ def send_subscription_message(subscription_id: str, request: IncomingMessage, re
     response.status_code = 202
     return SendMessageToSubscription(status="ok")
 
-
-@router.post("/{unique_id}", response_model=SubscribePostboxToSubscriptionResponse)
-def subscribe_postbox_to_subscription(unique_id: str, request: SubscribePostboxToSubscriptionRequest, response: Response):
-    with DB as db:
-        subscription_account = db.accounts.find_one({"subscriptions.unique_id": unique_id})
-        if not subscription_account:
-            raise HTTPException(status_code=400, detail="Subscription with this name does not exist")
-        account = db.accounts.find_one({"postboxes.postbox_id": request.postbox_id})
-        if not account:
-            raise HTTPException(status_code=400, detail="Postbox with this ID does not exist")
-        subscription = efl(subscription_account["subscriptions"], "unique_id", unique_id)
-        if request.postbox_id in subscription.get("subscribers", []):
-            raise HTTPException(status_code=400, detail="Postbox is already subscribed to this subscription")
-        db.accounts.update_one(
-            {"_id": subscription_account["_id"], "subscriptions.unique_id": unique_id},
-            {"$push": {"subscriptions.$.subscribers": request.postbox_id}})
-    response.status_code = 202
-    return SubscribePostboxToSubscriptionResponse(status="ok")
