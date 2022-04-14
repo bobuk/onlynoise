@@ -13,8 +13,8 @@ URL = "https://onlynoise.rubedo.cloud/v1/" if os.environ.get("RELEASE") else "ht
 
 
 class Config:
-    def __init__(self, path=".client.json"):
-        self.path = path
+    def __init__(self, sub = None, path=".client.json"):
+        self.path = (("." + sub ) if sub else "") + path
         try:
             with open(path) as f:
                 self.config = json.load(f)
@@ -30,21 +30,22 @@ class Config:
             json.dump(self.config, f)
 
 
-C = Config()
+USER = Config()
+CHAN = Config("chan")
 
 
-def wait_messages():
+def wait_messages(user=USER):
     con.print("Messages", style="bold blue")
     try:
-        for msg in SSEClient(URL + f"realtime/accounts/{C.get('account_id')}/messages"):
+        for msg in SSEClient(URL + f"realtime/accounts/{user.get('account_id')}/messages"):
             con.print(msg.data)
     except KeyboardInterrupt:
         con.print("... stopped", style="bold red")
 
 
-def list_postboxes():
+def list_postboxes(user):
     con.print("list of boxes:", style="bold blue")
-    req = httpx.get(URL + f"accounts/{C.get('account_id')}/postboxes").json()
+    req = httpx.get(URL + f"accounts/{user.get('account_id')}/postboxes").json()
     table = Table(show_header=True, header_style="bold blue")
     table.add_column("id", justify="left", style="green")
     table.add_column("date", justify="right", style="")
@@ -53,8 +54,8 @@ def list_postboxes():
     con.print(table)
 
 
-def messages_table():
-    req = httpx.get(URL + f"accounts/{C.get('account_id')}/messages").json()
+def messages_table(user):
+    req = httpx.get(URL + f"accounts/{user.get('account_id')}/messages").json()
     table = Table(show_header=True, header_style="bold blue")
     table.add_column("id", justify="left", style="green")
     table.add_column("subject", justify="left", style="green")
@@ -68,10 +69,10 @@ def messages_table():
 
 
 def main():
-    if not C.get("account_id"):
+    if not USER.get("account_id"):
         con.print("Setting up client...", style="bold red")
         req = httpx.post(URL + "accounts/").json()
-        C.set("account_id", req["account_id"])
+        USER.set("account_id", req["account_id"])
         con.print(f"Account ID: {req['account_id']}", style="bold green")
     con.print("Client ready", style="bold green")
     while True:
@@ -91,14 +92,14 @@ def main():
         elif cmd.startswith("boxes"):
             list_postboxes()
         elif cmd.startswith("create box"):
-            req = httpx.post(URL + f"accounts/{C.get('account_id')}/postboxes").json()
+            req = httpx.post(URL + f"accounts/{USER.get('account_id')}/postboxes").json()
             con.print(f"Created box {req['postbox_id']}", style="bold green")
         elif cmd.startswith("create subscription"):
             cmd = cmd.strip().split(" ")
             if len(cmd) == 2:
-                req = httpx.post(URL + f"subscriptions/", json={"account_id": C.get('account_id')})
+                req = httpx.post(URL + f"subscriptions/", json={"account_id": USER.get('account_id')})
             else:
-                req = httpx.post(URL + f"subscriptions/", json={"account_id": C.get('account_id'), "unique_id": cmd[2]})
+                req = httpx.post(URL + f"subscriptions/", json={"account_id": USER.get('account_id'), "unique_id": cmd[2]})
             if req.status_code < 300:
                 req = req.json()
                 con.print(f"Created subscription {req['subscription_id']} with id: {req['unique_id']}", style="bold green")
@@ -125,13 +126,10 @@ def main():
         elif cmd.startswith("send to "):
             cmd = cmd.split(" ", 3)[2:]
             if len(cmd) != 2:
-                con.print("Usage: send to <box_id | @sub_id> <message>", style="bold red")
+                con.print("Usage: send to <subscription_id> <message>", style="bold red")
                 continue
             box_id, message = cmd
-            if box_id.startswith("@"):
-                req = httpx.post(URL + f"subscriptions/{box_id[1:]}/messages", json={"body": message})
-            else:
-                req = httpx.post(URL + f"postboxes/{box_id}/messages", json={"body": message})
+            req = httpx.post(URL + f"subscriptions/{box_id[1:]}/messages", json={"body": message})
             if req.status_code in [200, 201, 202]:
                 con.print(f"Sent to {box_id}", style="bold green")
             else:
