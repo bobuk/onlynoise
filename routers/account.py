@@ -95,11 +95,9 @@ def create_account(response: Response):
 
 
 @router.get("/{account_id:str}", response_model=GetAccountResponse, summary="Get an account info by ID")
-def get_account(account_id: str, response: Response):
+def get_account(account_id: str):
     with DB as db:
-        account = db.accounts.find_one({"account_id": account_id})
-        if not account:
-            raise HTTPException(status_code=404, detail="account not found")
+        account = db_get_account(db, account_id)
         return GetAccountResponse(
             account_id=account_id,
             status="ok",
@@ -114,16 +112,10 @@ def get_account(account_id: str, response: Response):
 def create_device(account_id: str, request: CreateDeviceRequest, response: Response):
     created_at = int(time.time())
     with DB as db:
-        account = db.accounts.find_one({"account_id": account_id})
-        if not account:
-            response.status_code = 406
-            return CreateDeviceResponse(status="account_id not found")
+        account = db_get_account(db, account_id)
         full_device_id = f"{request.device_type}:{request.device_id}"
-        if not [
-            device
-            for device in account["devices"]
-            if device["device_id"] == full_device_id
-        ]:
+        dev = efl(account["devices"], "device_id", full_device_id)
+        if not dev:
             db.accounts.update_one(
                 {"account_id": account_id},
                 {
@@ -141,12 +133,9 @@ def create_device(account_id: str, request: CreateDeviceRequest, response: Respo
 
 
 @router.get("/{account_id:str}/postboxes", response_model=GetPostboxesResponse, summary="Get list of postboxes of an account")
-def get_postboxes(account_id: str, response: Response):
+def get_postboxes(account_id: str):
     with DB as db:
-        account = db.accounts.find_one({"account_id": account_id})
-        if not account:
-            response.status_code = 406
-            return GetPostboxesResponse(postboxes=[])
+        account = db_get_account(db, account_id)
         return GetPostboxesResponse(postboxes=account["postboxes"])
 
 
@@ -154,10 +143,7 @@ def get_postboxes(account_id: str, response: Response):
 def create_postbox(account_id: str, response: Response):
     created_at = int(time.time())
     with DB as db:
-        account = db.accounts.find_one({"account_id": account_id})
-        if not account:
-            response.status_code = 406
-            return CreatePostboxResponse(status="account_id not found")
+        db_get_account(db, account_id)
         postbox_id = create_random_string()
         db.accounts.update_one(
             {"account_id": account_id},
@@ -181,14 +167,12 @@ def create_postbox(account_id: str, response: Response):
 @router.post("/{account_id:str}/subscriptions", response_model=CreateSubscriptionResponse, summary="Subscribe account to a subscription")
 def create_subscription(account_id: str, request: CreateSubscriptionRequest, response: Response):
     with DB as db:
-        account = db.accounts.find_one({"account_id": account_id})
-        if not account:
-            response.status_code = 406
-            return CreateSubscriptionResponse(status="account_id not found")
+        account = db_get_account(db, account_id)
         subscription_account = db.accounts.find_one({"subscriptions.unique_id": request.unique_id})
         if not subscription_account:
-            response.status_code = 406
-            return CreateSubscriptionResponse(status="subscription not found")
+            raise HTTPException(status_code=406, detail="Subscription not found")
+        if efl(account["postboxes"], "subscription", request.unique_id):
+            raise HTTPException(status_code=409, detail="Already subscribed")
         created_at = int(time.time())
         postbox_id = create_random_string()
         db.accounts.update_one(

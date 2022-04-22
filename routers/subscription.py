@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from mongodb import DB
-from .meta import IncomingMessage, Meta, create_random_string, efl, put_message_to_subscription
+from .meta import IncomingMessage, Meta, create_random_string, efl, put_message_to_subscription, db_get_account_by_subscription, db_get_account
 
 router = APIRouter(prefix="/subscriptions")
 
@@ -35,9 +35,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
     with DB as db:
         if db.accounts.find_one({"subscriptions.unique_id": request.unique_id}):
             raise HTTPException(status_code=400, detail="Subscription with this unique ID already exists")
-        acc = db.accounts.find_one({"account_id": request.account_id})
-        if not acc:
-            raise HTTPException(status_code=400, detail="Account with this ID does not exist")
+        db_get_account(db, request.account_id, "Account with this ID does not exist")
 
     response.status_code = 201
     created_at = int(time.time())
@@ -59,9 +57,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
 @router.put("/{subscription_id}/meta", response_model=CreateSubscriptionResponse, summary="Update subscription meta data")
 def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRequest, response: Response):
     with DB as db:
-        account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
-        if not account:
-            raise HTTPException(status_code=400, detail="Subscription with this ID does not exist")
+        account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
         subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
         db.account.update_one(
             {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
@@ -77,14 +73,10 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
 @router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription, summary="Send message to subscription")
 def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
     with DB as db:
-        account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
-        if not account:
-            raise HTTPException(status_code=400, detail="Subscription with this ID does not exist")
+        account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
         put_message_to_subscription(db, subscription_id, request.dict())
-
         db.accounts.update_one(
             {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
             {"$set": {"subscriptions.$.updated_at": int(time.time())}})
     response.status_code = 202
     return SendMessageToSubscription(status="ok")
-

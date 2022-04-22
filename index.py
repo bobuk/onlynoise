@@ -1,5 +1,5 @@
-from mongodb import DB
-from fastapi import FastAPI, Request, Response
+# from mongodb import DB
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import modules as router_modules
 
@@ -14,3 +14,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("index:app", port=8080, reload=True, access_log=True, debug=True)

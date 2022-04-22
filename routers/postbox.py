@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from mongodb import DB
-from .meta import IncomingMessage, Message, Meta, put_message_to_postbox, efl
+from .meta import IncomingMessage, Message, Meta, put_message_to_postbox, efl, db_get_account_by_postbox
 
 router = APIRouter(prefix="/postboxes")
 
@@ -48,30 +48,24 @@ def remove_old_messages(db, account_id: str):
 def delete_postbox(postbox_id: str, response: Response):
     with DB as db:
         response.status_code = 200
-        account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
-        if account:
-            db.accounts.update_one(
-                {"_id": account["_id"]},
-                {"$pull": {"postboxes": {"postbox_id": postbox_id}}}
+        account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")
+        db.accounts.update_one(
+            {"_id": account["_id"]},
+            {"$pull": {"postboxes": {"postbox_id": postbox_id}}}
+        )
+        unique_id = efl(account["postboxes"], "postbox_id", postbox_id).get("subscription")
+        if unique_id:
+            db.subscriptions.update_one(
+                {"unique_id": unique_id},
+                {"$pull": {"subscribers": postbox_id}}
             )
-            unique_id = efl(account["postboxes"], "postbox_id", postbox_id).get("subscription")
-            if unique_id:
-                db.subscriptions.update_one(
-                    {"unique_id": unique_id},
-                    {"$pull": {"subscribers": postbox_id}}
-                )
-        else:
-            raise HTTPException(status_code=404, detail="postbox not found")
         return DelPostboxResponse(status="ok")
 
 
 @router.put("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="set postbox properties")
 def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: Response):
     with DB as db:
-        account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
-        if not account:
-            response.status_code = 404
-            return SetPostboxMetaResponse(status="postbox not found")
+        account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")
         req = dict(request)
         req["postbox_id"] = postbox_id
         db.accounts.update_one(
@@ -85,9 +79,7 @@ def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: 
 @router.get("/{postbox_id}/meta", response_model=GetPostboxMetaResponse, summary="get postbox properties")
 def get_postbox_meta(postbox_id: str, response: Response):
     with DB as db:
-        account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
-        if not account:
-            raise HTTPException(status_code=404, detail="postbox not found")
+        account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")
         response.status_code = 200
         postbox = efl(account["postboxes"], "postbox_id", postbox_id)
         return GetPostboxMetaResponse(sender=postbox.get("sender"), icon=postbox.get("icon"), color=postbox.get("color"))

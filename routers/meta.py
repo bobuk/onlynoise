@@ -46,14 +46,28 @@ class IncomingMessage(BaseModel):
     important: bool | None = Field(False, title="Important")
     meta: Meta | None = Field({}, title="Meta")
 
-def db_get_account(db: any, account_id: str, exception = None ):
-    account = db.accounts.find_one({"account_id": account_id})
+
+def _db_get_account(db: any, map_filter: dict, exception=None):
+    account = db.accounts.find_one(map_filter)
     if not account:
-        raise HTTPException(status_code=400, detail=exception if exception else f"Account {account_id} not found")
+        raise HTTPException(status_code=400, detail=exception if exception else f"Account not found")
     return account
 
 
+def db_get_account(db: any, account_id: str, exception=None):
+    return _db_get_account(db, {"account_id": account_id}, exception)
+
+
+def db_get_account_by_subscription(db, subscription_id: str, exception=None):
+    return _db_get_account(db, {"subscriptions.subscription_id": subscription_id}, exception)
+
+
+def db_get_account_by_postbox(db, postbox_id: str, exception=None):
+    return _db_get_account(db, {"postboxes.postbox_id": postbox_id}, exception)
+
+
 def put_message_to_subscription(db, subscription_id, message):
+    print(message)
     account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
     subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
     if not subscription:
@@ -63,7 +77,6 @@ def put_message_to_subscription(db, subscription_id, message):
         if v:
             meta[k] = v
     for postbox in subscription.get("subscribers", []):
-        print(postbox, message)
         put_message_to_postbox(db, postbox, message)
 
 
