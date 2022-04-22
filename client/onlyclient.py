@@ -42,9 +42,9 @@ class OnlyClient:
         req = GET(f"accounts/{account_id}")
         return req
 
-    def create_subscription(self, unique_id):
+    def create_subscription(self, unique_id, meta=None):
         account_id = self.get("account_id")
-        req = POST("subscriptions/", account_id=account_id, unique_id=unique_id)
+        req = POST("subscriptions/", account_id=account_id, unique_id=unique_id, meta=meta if meta else {})
         return req
 
     def subscribe_to(self, unique_id):

@@ -55,9 +55,9 @@ def delete_postbox(postbox_id: str, response: Response):
         )
         unique_id = efl(account["postboxes"], "postbox_id", postbox_id).get("subscription")
         if unique_id:
-            db.subscriptions.update_one(
-                {"unique_id": unique_id},
-                {"$pull": {"subscribers": postbox_id}}
+            db.accounts.update_one(
+                {"subscriptions.unique_id": unique_id},
+                {"$pull": {"subscriptions.$.subscribers": postbox_id}}
             )
         return DelPostboxResponse(status="ok")
 

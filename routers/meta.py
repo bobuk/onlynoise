@@ -78,6 +78,7 @@ def put_message_to_subscription(db: pymongo.database.Database, subscription_id: 
     for k, v in dict(message["meta"]).items():
         if v:
             meta[k] = v
+    message["meta"] = meta
     for postbox in subscription.get("subscribers", []):
         put_message_to_postbox(db, postbox, message)
 
