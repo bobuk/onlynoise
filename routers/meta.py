@@ -3,6 +3,8 @@ import string
 import time
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
+from typing import List, Dict
+import pymongo.database
 
 
 def create_random_string(length: int = 32) -> str:
@@ -11,7 +13,7 @@ def create_random_string(length: int = 32) -> str:
     )
 
 
-def efl(d: list[dict], key: str, value: [str, int]) -> dict:
+def efl(d: List[Dict], key: str, value: str | int) -> dict:
     for e in d:
         if e[key] == value:
             return e
@@ -47,26 +49,26 @@ class IncomingMessage(BaseModel):
     meta: Meta | None = Field({}, title="Meta")
 
 
-def _db_get_account(db: any, map_filter: dict, exception=None):
+def _db_get_account(db: pymongo.database.Database, map_filter: dict, exception=None):
     account = db.accounts.find_one(map_filter)
     if not account:
         raise HTTPException(status_code=400, detail=exception if exception else f"Account not found")
     return account
 
 
-def db_get_account(db: any, account_id: str, exception=None):
+def db_get_account(db: pymongo.database.Database, account_id: str, exception: str | None = None):
     return _db_get_account(db, {"account_id": account_id}, exception)
 
 
-def db_get_account_by_subscription(db, subscription_id: str, exception=None):
+def db_get_account_by_subscription(db: pymongo.database.Database, subscription_id: str, exception: str | None = None):
     return _db_get_account(db, {"subscriptions.subscription_id": subscription_id}, exception)
 
 
-def db_get_account_by_postbox(db, postbox_id: str, exception=None):
+def db_get_account_by_postbox(db: pymongo.database.Database, postbox_id: str, exception: str | None = None):
     return _db_get_account(db, {"postboxes.postbox_id": postbox_id}, exception)
 
 
-def put_message_to_subscription(db, subscription_id, message):
+def put_message_to_subscription(db: pymongo.database.Database, subscription_id: str, message: Dict):
     print(message)
     account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
     subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
@@ -80,7 +82,7 @@ def put_message_to_subscription(db, subscription_id, message):
         put_message_to_postbox(db, postbox, message)
 
 
-def put_message_to_postbox(db, postbox_id, message) -> bool:
+def put_message_to_postbox(db: pymongo.database.Database, postbox_id: str, message: dict) -> bool:
     account = db.accounts.find_one({"postboxes.postbox_id": postbox_id})
     if not account:
         return False

@@ -44,7 +44,7 @@ def remove_old_messages(db, account_id: str):
     )
 
 
-@router.delete("/{postbox_id}", response_model=DelPostboxResponse, summary="delete postbox (and unsubsribe from the subscription)")
+@router.delete("/{postbox_id}", response_model=DelPostboxResponse, summary="delete postbox (and unsubscribe from the subscription)")
 def delete_postbox(postbox_id: str, response: Response):
     with DB as db:
         response.status_code = 200
@@ -62,7 +62,7 @@ def delete_postbox(postbox_id: str, response: Response):
         return DelPostboxResponse(status="ok")
 
 
-@router.put("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="set postbox properties")
+@router.post("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="set postbox properties")
 def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: Response):
     with DB as db:
         account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")

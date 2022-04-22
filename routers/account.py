@@ -183,7 +183,7 @@ def create_subscription(account_id: str, request: CreateSubscriptionRequest, res
                         "postbox_id": postbox_id,
                         "subscription": request.unique_id,
                         "created_at": created_at,
-                        "meta": dict(request.meta if request.meta else {})
+                        "meta": request.meta.dict() if request.meta else {}
                     }
                 }
             },

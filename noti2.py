@@ -6,8 +6,8 @@ import time
 import pymongo
 from pyapns_client import APNSClient, APNSDeviceException, APNSProgrammingException, APNSServerException, IOSNotification, IOSPayload, IOSPayloadAlert, \
     UnregisteredException
-
-from mongodb import DB
+import pymongo.database
+from mongodb import DB, MongoDB
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
@@ -32,12 +32,12 @@ def create_client(key_file: str):
         team_id=os.environ["APPLE_TEAM_ID"])
 
 
-def drop_device_from_accounts(db: DB, device_id: str):
+def drop_device_from_accounts(db: pymongo.database.Database, device_id: str):
     db.accounts.update_many({}, {'$pull': {'devices': {'device_id': device_id}}})
     logging.info(f"Device {device_id} removed from all accounts")
 
 
-def send_message(db: DB, message: dict, client: APNSClient):
+def send_message(db: pymongo.database.Database, message: dict, client: APNSClient):
     account = db.accounts.find_one({'postboxes.postbox_id': message['postbox_id']})
     if not account:
         return logging.error(f"No devices found for postbox {message['postbox_id']} {message=}")

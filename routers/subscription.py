@@ -44,7 +44,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
         "unique_id": request.unique_id,
         "created_at": created_at,
         "updated_at": created_at,
-        "meta": request.meta.dict(),
+        "meta": request.meta.dict() if request.meta else {},
         "subscribers": [],
     }
     with DB as db:
@@ -54,7 +54,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
     )
 
 
-@router.put("/{subscription_id}/meta", response_model=CreateSubscriptionResponse, summary="Update subscription meta data")
+@router.post("/{subscription_id}/meta", response_model=CreateSubscriptionResponse, summary="Update subscription meta data")
 def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRequest, response: Response):
     with DB as db:
         account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
@@ -62,7 +62,7 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
         db.account.update_one(
             {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
             {"$set": {
-                "subscriptions.$.meta": request.meta.dict(),
+                "subscriptions.$.meta": request.meta.dict() if request.meta else {},
                 "subscriptions.$.updated_at": int(time.time())}})
     response.status_code = 201
     return CreateSubscriptionResponse(
