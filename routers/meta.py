@@ -15,7 +15,7 @@ def create_random_string(length: int = 32) -> str:
 
 def efl(d: List[Dict], key: str, value: str | int) -> dict:
     for e in d:
-        if e[key] == value:
+        if e.get(key, None) == value:
             return e
     return {}
 

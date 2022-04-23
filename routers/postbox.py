@@ -85,13 +85,13 @@ def get_postbox_meta(postbox_id: str, response: Response):
         return GetPostboxMetaResponse(sender=postbox.get("sender"), icon=postbox.get("icon"), color=postbox.get("color"))
 
 
-@router.post("/{postbox_id}/messages", response_model=IncomingMessage, include_in_schema=False)
-def create_message(postbox_id: str, request: IncomingMessage, response: Response):
-    with DB as db:
-        if not put_message_to_postbox(db, postbox_id, request.dict()):
-            raise HTTPException(status_code=400, detail="message not saved")
-        response.status_code = 201
-        return CreateMessageResponse(status="ok")
+# @router.post("/{postbox_id}/messages", response_model=IncomingMessage, include_in_schema=False)
+# def create_message(postbox_id: str, request: IncomingMessage, response: Response):
+#     with DB as db:
+#         if not put_message_to_postbox(db, postbox_id, request.dict()):
+#             raise HTTPException(status_code=400, detail="message not saved")
+#         response.status_code = 201
+#         return CreateMessageResponse(status="ok")
 
 
 @router.get("/{postbox_id}/messages", response_model=GetMessagesResponse, summary="Get list of messages for an postbox")

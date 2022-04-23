@@ -59,7 +59,7 @@ class CreatePostboxResponse(BaseModel):
 class PostboxInfo(BaseModel):
     postbox_id: str = Field(..., title="Postbox ID")
     created_at: int = Field(..., title="Unix timestamp")
-    meta: dict = Field(default_factory=dict, title="Meta data")
+    meta: Meta | None = Field(None, title="Meta data")
 
 
 class GetPostboxesResponse(BaseModel):
@@ -145,29 +145,29 @@ def get_postboxes(account_id: str):
         return GetPostboxesResponse(postboxes=account["postboxes"])
 
 
-@router.post("/{account_id:str}/postboxes", response_model=CreatePostboxResponse, include_in_schema=False)
-def create_postbox(account_id: str, response: Response):
-    created_at = int(time.time())
-    with DB as db:
-        db_get_account(db, account_id)
-        postbox_id = create_random_string()
-        db.accounts.update_one(
-            {"account_id": account_id},
-            {
-                "$push": {
-                    "postboxes": {
-                        "postbox_id": postbox_id,
-                        "subscription": None,
-                        "created_at": created_at,
-                        "meta": {}
-                    }
-                }
-            },
-        )
-    response.status_code = 201
-    return CreatePostboxResponse(
-        status="created", postbox_id=postbox_id, created_at=created_at
-    )
+# @router.post("/{account_id:str}/postboxes", response_model=CreatePostboxResponse, include_in_schema=False)
+# def create_postbox(account_id: str, response: Response):
+#     created_at = int(time.time())
+#     with DB as db:
+#         db_get_account(db, account_id)
+#         postbox_id = create_random_string()
+#         db.accounts.update_one(
+#             {"account_id": account_id},
+#             {
+#                 "$push": {
+#                     "postboxes": {
+#                         "postbox_id": postbox_id,
+#                         "subscription": None,
+#                         "created_at": created_at,
+#                         "meta": {}
+#                     }
+#                 }
+#             },
+#         )
+#     response.status_code = 201
+#     return CreatePostboxResponse(
+#         status="created", postbox_id=postbox_id, created_at=created_at
+#     )
 
 
 @router.post("/{account_id:str}/subscriptions", response_model=CreateSubscriptionResponse, summary="Subscribe account to a subscription")

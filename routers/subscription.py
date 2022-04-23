@@ -70,13 +70,13 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
     )
 
 
-@router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription, summary="Send message to subscription", include_in_schema=False)
-def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
-    with DB as db:
-        account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
-        put_message_to_subscription(db, subscription_id, request.dict())
-        db.accounts.update_one(
-            {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
-            {"$set": {"subscriptions.$.updated_at": int(time.time())}})
-    response.status_code = 202
-    return SendMessageToSubscription(status="ok")
+# @router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription, summary="Send message to subscription", include_in_schema=False)
+# def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
+#     with DB as db:
+#         account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
+#         put_message_to_subscription(db, subscription_id, request.dict())
+#         db.accounts.update_one(
+#             {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
+#             {"$set": {"subscriptions.$.updated_at": int(time.time())}})
+#     response.status_code = 202
+#     return SendMessageToSubscription(status="ok")
