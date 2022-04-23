@@ -2,6 +2,7 @@
 
 ## Todo
 
+- [ ] update message (edit)
 - [x] remove subscriptions when remove postbox
 - [x] get account info (list of postboxes etc.)
 - [x] force to not subscribe twice on the same channel

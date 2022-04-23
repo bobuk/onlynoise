@@ -1,5 +1,5 @@
 import time
-
+from typing import List
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
@@ -56,8 +56,14 @@ class CreatePostboxResponse(BaseModel):
     )
 
 
+class PostboxInfo(BaseModel):
+    postbox_id: str = Field(..., title="Postbox ID")
+    created_at: int = Field(..., title="Unix timestamp")
+    meta: dict = Field(default_factory=dict, title="Meta data")
+
+
 class GetPostboxesResponse(BaseModel):
-    postboxes: list = Field(..., title="List of postboxes")
+    postboxes: List[PostboxInfo] = Field(..., title="List of postboxes")
 
 
 class CreateSubscriptionRequest(BaseModel):

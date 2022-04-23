@@ -44,7 +44,7 @@ def remove_old_messages(db, account_id: str):
     )
 
 
-@router.delete("/{postbox_id}", response_model=DelPostboxResponse, summary="delete postbox (and unsubscribe from the subscription)")
+@router.delete("/{postbox_id}", response_model=DelPostboxResponse, summary="Delete postbox (and unsubscribe from the subscription)")
 def delete_postbox(postbox_id: str, response: Response):
     with DB as db:
         response.status_code = 200
