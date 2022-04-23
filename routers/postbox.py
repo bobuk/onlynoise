@@ -66,11 +66,11 @@ def delete_postbox(postbox_id: str, response: Response):
 def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: Response):
     with DB as db:
         account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")
-        req = dict(request)
-        req["postbox_id"] = postbox_id
+        postbox = efl(account["postboxes"], "postbox_id", postbox_id)
+        postbox["meta"] = request.dict()
         db.accounts.update_one(
             {"_id": account["_id"], "postboxes.postbox_id": postbox_id},
-            {"$set": {"postboxes.$": {"meta": req}}}
+            {"$set": {"postboxes.$": postbox}}
         )
         response.status_code = 200
         return SetPostboxMetaResponse(status="ok")
