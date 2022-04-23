@@ -15,7 +15,7 @@ router = APIRouter(prefix="/realtime")
 client = motor.motor_asyncio.AsyncIOMotorClient(f"mongodb://{MONGO_HOST}:27017")
 
 
-@router.get("/accounts/{account_id:str}/messages", summary="get realtime updates with all the messages from an account")
+@router.get("/accounts/{account_id:str}/messages", summary="Get realtime updates with all the messages from an account")
 async def eventsource_get_account_messages(account_id: str, request: Request):
     db = client.ondb
 

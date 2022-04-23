@@ -62,7 +62,7 @@ def delete_postbox(postbox_id: str, response: Response):
         return DelPostboxResponse(status="ok")
 
 
-@router.post("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="set postbox properties")
+@router.post("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="Set postbox properties")
 def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: Response):
     with DB as db:
         account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")
@@ -76,7 +76,7 @@ def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: 
         return SetPostboxMetaResponse(status="ok")
 
 
-@router.get("/{postbox_id}/meta", response_model=GetPostboxMetaResponse, summary="get postbox properties")
+@router.get("/{postbox_id}/meta", response_model=GetPostboxMetaResponse, summary="Get postbox properties")
 def get_postbox_meta(postbox_id: str, response: Response):
     with DB as db:
         account = db_get_account_by_postbox(db, postbox_id, f"Postbox {postbox_id} not found")
@@ -94,7 +94,7 @@ def create_message(postbox_id: str, request: IncomingMessage, response: Response
         return CreateMessageResponse(status="ok")
 
 
-@router.get("/{postbox_id}/messages", response_model=GetMessagesResponse, summary="get list of messages for an postbox")
+@router.get("/{postbox_id}/messages", response_model=GetMessagesResponse, summary="Get list of messages for an postbox")
 def get_messages(postbox_id: str, response: Response):
     with DB as db:
         messages = []
