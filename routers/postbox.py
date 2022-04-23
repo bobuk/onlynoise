@@ -70,7 +70,7 @@ def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: 
         req["postbox_id"] = postbox_id
         db.accounts.update_one(
             {"_id": account["_id"], "postboxes.postbox_id": postbox_id},
-            {"$set": {"postboxes.$": req}}
+            {"$set": {"postboxes.$": {"meta": req}}}
         )
         response.status_code = 200
         return SetPostboxMetaResponse(status="ok")
