@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 
 from mongodb import DB
-from .meta import IncomingMessage, Meta, create_random_string, efl, put_message_to_subscription, db_get_account_by_subscription, db_get_account
+from .meta import Meta, create_random_string, efl
 
 router = APIRouter(prefix="/subscriptions")
 
@@ -31,7 +31,7 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
     with DB as db:
         if db.accounts.find_one({"subscriptions.unique_id": request.unique_id}):
             raise HTTPException(status_code=400, detail="Subscription with this unique ID already exists")
-        db_get_account(db, request.account_id, "Account with this ID does not exist")
+    DB.accounts_get(request.account_id, "Account with this ID does not exist")
 
     response.status_code = 201
     created_at = int(time.time())
@@ -52,9 +52,9 @@ def create_subscription(request: CreateSubscriptionRequest, response: Response):
 
 @router.post("/{subscription_id}/meta", response_model=CreateSubscriptionResponse, summary="Update subscription meta data")
 def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRequest, response: Response):
+    account = DB.accounts_get_by_subscription(subscription_id, "Subscription with this ID does not exist")
+    subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
     with DB as db:
-        account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
-        subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
         db.account.update_one(
             {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
             {"$set": {

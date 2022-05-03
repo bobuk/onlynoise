@@ -49,28 +49,10 @@ class IncomingMessage(BaseModel):
     meta: Meta | None = Field({}, title="Meta")
 
 
-def _db_get_account(db: pymongo.database.Database, map_filter: dict, exception=None):
-    account = db.accounts.find_one(map_filter)
-    if not account:
-        raise HTTPException(status_code=400, detail=exception if exception else f"Account not found")
-    return account
-
-
-def db_get_account(db: pymongo.database.Database, account_id: str, exception: str | None = None):
-    return _db_get_account(db, {"account_id": account_id}, exception)
-
-
-def db_get_account_by_subscription(db: pymongo.database.Database, subscription_id: str, exception: str | None = None):
-    return _db_get_account(db, {"subscriptions.subscription_id": subscription_id}, exception)
-
-
-def db_get_account_by_postbox(db: pymongo.database.Database, postbox_id: str, exception: str | None = None):
-    return _db_get_account(db, {"postboxes.postbox_id": postbox_id}, exception)
-
-
 def put_message_to_subscription(db: pymongo.database.Database, subscription_id: str, message: Dict):
-    print(message)
     account = db.accounts.find_one({"subscriptions.subscription_id": subscription_id})
+    if not account:
+        return None
     subscription = efl(account["subscriptions"], "subscription_id", subscription_id)
     if not subscription:
         return None
