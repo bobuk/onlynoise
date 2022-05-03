@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from mongodb import DB
 from . import postbox
-from .meta import IncomingMessage, Meta, create_random_string, put_message_to_subscription, efl, db_get_account
+from .meta import IncomingMessage, Meta, create_random_string, put_message_to_subscription, efl
 
 router = APIRouter(prefix="/accounts")
 
@@ -15,9 +15,6 @@ class CreateAccountResponse(BaseModel):
     created_at: int = Field(
         default_factory=lambda: int(time.time()), title="Unix timestamp"
     )
-    status: str = Field(
-        default_factory=lambda: "created", title="Status of the request"
-    )
 
 
 class GetAccountResponse(BaseModel):
@@ -25,19 +22,9 @@ class GetAccountResponse(BaseModel):
     created_at: int = Field(
         default_factory=lambda: int(time.time()), title="Unix timestamp"
     )
-    status: str = Field("created", title="Status of the request")
     devices: list = Field(default_factory=list, title="List of devices associated with the account")
     postboxes: list = Field(default_factory=list, title="List of postboxes")
     subscriptions: list = Field(default_factory=list, title="List of subscriptions")
-
-
-class CreateDeviceResponse(BaseModel):
-    created_at: int = Field(
-        default_factory=lambda: int(time.time()), title="Unix timestamp"
-    )
-    status: str = Field(
-        default_factory=lambda: "created", title="Status of the request"
-    )
 
 
 class CreateDeviceRequest(BaseModel):
@@ -48,9 +35,6 @@ class CreateDeviceRequest(BaseModel):
 class CreatePostboxResponse(BaseModel):
     subscription: str | None = Field("", title="Subscription Unique ID")
     postbox_id: str | None = Field("", title="Postbox ID")
-    status: str = Field(
-        default_factory=lambda: "created", title="Status of the request"
-    )
     created_at: int = Field(
         default_factory=lambda: int(time.time()), title="Unix timestamp"
     )
@@ -82,22 +66,7 @@ class PublishMessageToSubscriptionResponse(BaseModel):
 @router.post("/", response_model=CreateAccountResponse, summary="Create an account")
 def create_account(response: Response):
     response.status_code = 201
-    account_id = create_random_string()
-
-    created_at = int(time.time())
-    with DB as db:
-        db.accounts.insert_one(
-            {
-                "account_id": account_id,
-                "created_at": created_at,
-                "devices": [],
-                "postboxes": [],
-                "subscriptions": []
-            }
-        )
-    return CreateAccountResponse(
-        status="created", account_id=account_id, created_at=created_at
-    )
+    return CreateAccountResponse(**res)
 
 
 @router.get("/{account_id:str}", response_model=GetAccountResponse, summary="Get an account info by ID")
@@ -135,7 +104,7 @@ def create_device(account_id: str, request: CreateDeviceRequest, response: Respo
             )
 
     response.status_code = 201
-    return CreateDeviceResponse(status="created", created_at=created_at)
+    return
 
 
 @router.get("/{account_id:str}/postboxes", response_model=GetPostboxesResponse, summary="Get list of postboxes of an account")
@@ -216,7 +185,7 @@ def send_subscription_message(account_id: str, unique_id: str, request: Incoming
             {"_id": account["_id"], "subscriptions.subscription_id": subscription["subscription_id"]},
             {"$set": {"subscriptions.$.updated_at": int(time.time())}})
     response.status_code = 202
-    return PublishMessageToSubscriptionResponse(status="ok")
+    return
 
 
 @router.get("/{account_id:str}/messages", response_model=postbox.GetMessagesResponse, summary="Get all messages from an account")

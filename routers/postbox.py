@@ -18,18 +18,6 @@ class SetPostboxMetaRequest(Meta):
     pass
 
 
-class DelPostboxResponse(BaseModel):
-    status: str = Field("ok", title="Status")
-
-
-class SetPostboxMetaResponse(BaseModel):
-    status: str | None = Field("ok", title="Status")
-
-
-class CreateMessageResponse(BaseModel):
-    status: str = Field(..., title="Status")
-
-
 class GetMessagesResponse(BaseModel):
     messages: list[Message] = Field(..., title="Messages list")
 
@@ -59,7 +47,7 @@ def delete_postbox(postbox_id: str, response: Response):
                 {"subscriptions.unique_id": unique_id},
                 {"$pull": {"subscriptions.$.subscribers": postbox_id}}
             )
-        return DelPostboxResponse(status="ok")
+    return
 
 
 @router.post("/{postbox_id}/meta", response_model=SetPostboxMetaResponse, summary="Set postbox properties")
@@ -73,7 +61,7 @@ def set_postbox_meta(postbox_id: str, request: SetPostboxMetaRequest, response: 
             {"$set": {"postboxes.$": postbox}}
         )
         response.status_code = 200
-        return SetPostboxMetaResponse(status="ok")
+        return
 
 
 @router.get("/{postbox_id}/meta", response_model=GetPostboxMetaResponse, summary="Get postbox properties")

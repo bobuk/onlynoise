@@ -15,10 +15,6 @@ class CreateSubscriptionRequest(BaseModel):
     meta: Meta | None = Field(default_factory=Meta, title="Meta data")
 
 
-class SendMessageToSubscription(BaseModel):
-    status: str = Field(default="ok", title="Status")
-
-
 class CreateSubscriptionResponse(BaseModel):
     status: str = Field(default="ok", title="Status")
     subscription_id: str = Field(title="Subscription ID")
@@ -68,15 +64,3 @@ def update_subscription_meta(subscription_id: str, request: CreateSubscriptionRe
     return CreateSubscriptionResponse(
         status="updated", subscription_id=subscription_id, unique_id=subscription["unique_id"], created_at=subscription["created_at"], meta=request.meta
     )
-
-
-# @router.post("/{subscription_id}/messages", response_model=SendMessageToSubscription, summary="Send message to subscription", include_in_schema=False)
-# def send_subscription_message(subscription_id: str, request: IncomingMessage, response: Response):
-#     with DB as db:
-#         account = db_get_account_by_subscription(db, subscription_id, "Subscription with this ID does not exist")
-#         put_message_to_subscription(db, subscription_id, request.dict())
-#         db.accounts.update_one(
-#             {"_id": account["_id"], "subscriptions.subscription_id": subscription_id},
-#             {"$set": {"subscriptions.$.updated_at": int(time.time())}})
-#     response.status_code = 202
-#     return SendMessageToSubscription(status="ok")
